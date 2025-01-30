@@ -27,6 +27,8 @@ class App {
         this.backButton = document.getElementById('back-to-upload');
         
         this.currentSelection = { start: 0, end: 0 };
+        this.pageSize = 400; // Height of visible content in pixels
+        this.currentPage = 1;
         this.loadVoices();
         this.setupEventListeners();
     }
@@ -45,28 +47,32 @@ class App {
         // Download
         this.downloadButton.addEventListener('click', () => this.downloadSample());
 
+        // Page navigation
+        document.getElementById('page-up')?.addEventListener('click', () => this.prevPage());
+        document.getElementById('page-down')?.addEventListener('click', () => this.nextPage());
+        document.getElementById('prev-page')?.addEventListener('click', () => this.prevPage());
+        document.getElementById('next-page')?.addEventListener('click', () => this.nextPage());
+        
         // Scroll navigation
         document.getElementById('scroll-top')?.addEventListener('click', () => {
             this.textContent.scrollTo({ top: 0, behavior: 'smooth' });
+            this.currentPage = 1;
+            this.updatePageInfo();
         });
         
         document.getElementById('scroll-bottom')?.addEventListener('click', () => {
             this.textContent.scrollTo({ 
-                top: this.textContent.scrollHeight, 
-                behavior: 'smooth' 
+                top: this.textContent.scrollHeight,
+                behavior: 'smooth'
             });
+            this.currentPage = this.getTotalPages();
+            this.updatePageInfo();
         });
 
-        // Track scroll progress
+        // Track scroll for page updates
         this.textContent.addEventListener('scroll', () => {
-            const progress = this.textContent.scrollTop / 
-                (this.textContent.scrollHeight - this.textContent.clientHeight);
-            const progressBar = document.querySelector('.scroll-progress');
-            if (progressBar) {
-                const containerHeight = document.querySelector('.scroll-indicator').clientHeight;
-                progressBar.style.height = `${containerHeight * 0.2}px`;  // 20% of container height
-                progressBar.style.top = `${progress * (containerHeight - progressBar.clientHeight)}px`;
-            }
+            this.currentPage = Math.ceil(this.textContent.scrollTop / this.pageSize) + 1;
+            this.updatePageInfo();
         });
     }
 
@@ -212,6 +218,8 @@ class App {
         this.uploadView.classList.add('hidden');
         this.textView.classList.remove('hidden');
         this.textContent.textContent = content;
+        this.currentPage = 1;
+        this.updatePageInfo();
     }
 
     showUploadView() {
@@ -230,6 +238,46 @@ class App {
             a.click();
             document.body.removeChild(a);
         }
+    }
+
+    prevPage() {
+        if (this.currentPage > 1) {
+            this.currentPage--;
+            this.textContent.scrollTo({
+                top: (this.currentPage - 1) * this.pageSize,
+                behavior: 'smooth'
+            });
+            this.updatePageInfo();
+        }
+    }
+
+    nextPage() {
+        const totalPages = this.getTotalPages();
+        if (this.currentPage < totalPages) {
+            this.currentPage++;
+            this.textContent.scrollTo({
+                top: (this.currentPage - 1) * this.pageSize,
+                behavior: 'smooth'
+            });
+            this.updatePageInfo();
+        }
+    }
+
+    getTotalPages() {
+        return Math.ceil(this.textContent.scrollHeight / this.pageSize);
+    }
+
+    updatePageInfo() {
+        const totalPages = this.getTotalPages();
+        document.getElementById('current-page').textContent = this.currentPage;
+        document.getElementById('page-number').textContent = `${this.currentPage}/${totalPages}`;
+        
+        // Update button states
+        const prevButtons = document.querySelectorAll('#prev-page, #page-up');
+        const nextButtons = document.querySelectorAll('#next-page, #page-down');
+        
+        prevButtons.forEach(btn => btn.disabled = this.currentPage === 1);
+        nextButtons.forEach(btn => btn.disabled = this.currentPage === totalPages);
     }
 }
 

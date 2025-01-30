@@ -53,12 +53,20 @@
                     <span>Selected: <span id="selection-length">0</span> characters (max 500 for sample)</span>
                 </div>
                 <div class="text-navigation">
-                    <button id="scroll-top" class="nav-button">↑ Top</button>
-                    <div class="scroll-indicator">
-                        <div class="scroll-progress"></div>
+                    <button id="scroll-top" class="nav-button" title="Go to top">↑</button>
+                    <button id="page-up" class="nav-button" title="Previous page">▲</button>
+                    <div class="page-info">
+                        Page <span id="current-page">1</span>
                     </div>
-                    <button id="scroll-bottom" class="nav-button">↓ Bottom</button>
+                    <button id="page-down" class="nav-button" title="Next page">▼</button>
+                    <button id="scroll-bottom" class="nav-button" title="Go to bottom">↓</button>
                 </div>
+            </div>
+
+            <div class="nav-controls">
+                <button id="prev-page" class="secondary-button">← Previous</button>
+                <span class="page-info">Page <span id="page-number">1</span></span>
+                <button id="next-page" class="secondary-button">Next →</button>
             </div>
 
             <div class="actions">
