@@ -44,6 +44,30 @@ class App {
         
         // Download
         this.downloadButton.addEventListener('click', () => this.downloadSample());
+
+        // Scroll navigation
+        document.getElementById('scroll-top')?.addEventListener('click', () => {
+            this.textContent.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+        
+        document.getElementById('scroll-bottom')?.addEventListener('click', () => {
+            this.textContent.scrollTo({ 
+                top: this.textContent.scrollHeight, 
+                behavior: 'smooth' 
+            });
+        });
+
+        // Track scroll progress
+        this.textContent.addEventListener('scroll', () => {
+            const progress = this.textContent.scrollTop / 
+                (this.textContent.scrollHeight - this.textContent.clientHeight);
+            const progressBar = document.querySelector('.scroll-progress');
+            if (progressBar) {
+                const containerHeight = document.querySelector('.scroll-indicator').clientHeight;
+                progressBar.style.height = `${containerHeight * 0.2}px`;  // 20% of container height
+                progressBar.style.top = `${progress * (containerHeight - progressBar.clientHeight)}px`;
+            }
+        });
     }
 
     async loadVoices() {
@@ -105,6 +129,7 @@ class App {
     handleTextSelection() {
         const selection = window.getSelection();
         const text = selection.toString().trim();
+        const MAX_SAMPLE_LENGTH = 500;
 
         if (text) {
             const range = selection.getRangeAt(0);
@@ -113,9 +138,14 @@ class App {
                 end: this.getTextOffset(range.endContainer, range.endOffset)
             };
             
-            this.selectionLength.textContent = text.length;
+            const selectionLength = text.length;
+            this.selectionLength.textContent = `${selectionLength}/${MAX_SAMPLE_LENGTH}`;
             this.selectionInfo.classList.remove('hidden');
-            this.generateButton.disabled = false;
+            this.generateButton.disabled = selectionLength > MAX_SAMPLE_LENGTH;
+            
+            if (selectionLength > MAX_SAMPLE_LENGTH) {
+                alert(`Selection too long. Maximum length is ${MAX_SAMPLE_LENGTH} characters.`);
+            }
         } else {
             this.currentSelection = { start: 0, end: 0 };
             this.selectionInfo.classList.add('hidden');

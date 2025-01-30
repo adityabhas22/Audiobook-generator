@@ -13,7 +13,7 @@ class VoicesResponse(BaseModel):
 
 class GenerateAudioRequest(BaseModel):
     """Request model for generate-sample endpoint"""
-    text: str = Field(..., min_length=1, max_length=5000)
+    text: str = Field(..., min_length=1, max_length=500000)
     voice_id: Optional[str] = None
     start_position: Optional[int] = Field(default=0, ge=0)
     end_position: Optional[int] = None

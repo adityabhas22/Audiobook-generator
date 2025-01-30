@@ -46,9 +46,18 @@
             </div>
 
             <div class="text-selection-container">
-                <div id="text-content" class="text-content" contenteditable="true"></div>
+                <div class="text-content-wrapper">
+                    <div id="text-content" class="text-content" contenteditable="true"></div>
+                </div>
                 <div class="selection-info hidden">
-                    <span>Selected: <span id="selection-length">0</span> characters</span>
+                    <span>Selected: <span id="selection-length">0</span> characters (max 500 for sample)</span>
+                </div>
+                <div class="text-navigation">
+                    <button id="scroll-top" class="nav-button">↑ Top</button>
+                    <div class="scroll-indicator">
+                        <div class="scroll-progress"></div>
+                    </div>
+                    <button id="scroll-bottom" class="nav-button">↓ Bottom</button>
                 </div>
             </div>
 
