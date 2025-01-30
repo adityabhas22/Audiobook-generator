@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audiobook Sample Generator</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Initial Upload View -->
+        <div id="upload-view" class="view">
+            <h1>Create Audiobook Sample</h1>
+            
+            <div class="upload-section">
+                <div id="drop-zone" class="drop-zone">
+                    <div class="upload-icon">📚</div>
+                    <p>Drag & drop your ebook here or</p>
+                    <input type="file" id="file-input" accept=".txt,.epub" hidden>
+                    <button id="select-file-btn" class="primary-button">Select File</button>
+                    <div class="supported-formats">
+                        Supported formats: .txt, .epub
+                    </div>
+                </div>
+            </div>
+
+            <div class="voice-preview-section">
+                <h2>Preview Voices</h2>
+                <div class="voice-selector">
+                    <select id="voice-select" class="voice-dropdown">
+                        <option value="">Loading voices...</option>
+                    </select>
+                    <button id="preview-voice-btn" class="secondary-button">Preview Voice</button>
+                </div>
+                <div id="voice-preview-player" class="audio-player hidden">
+                    <audio id="preview-audio" controls></audio>
+                </div>
+            </div>
+        </div>
+
+        <!-- Text Selection View -->
+        <div id="text-view" class="view hidden">
+            <div class="header-actions">
+                <h2>Select Text for Sample</h2>
+                <button id="back-to-upload" class="text-button">← Back to Upload</button>
+            </div>
+
+            <div class="text-selection-container">
+                <div id="text-content" class="text-content" contenteditable="true"></div>
+                <div class="selection-info hidden">
+                    <span>Selected: <span id="selection-length">0</span> characters</span>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button id="generate-btn" class="primary-button" disabled>Generate Sample</button>
+            </div>
+
+            <div id="sample-player" class="audio-player hidden">
+                <h3>Generated Sample</h3>
+                <audio id="sample-audio" controls></audio>
+                <button id="download-btn" class="secondary-button">Download Sample</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="scripts/fileHandler.js"></script>
+    <script src="scripts/audioPlayer.js"></script>
+    <script src="scripts/app.js"></script>
+</body>
+</html> 
