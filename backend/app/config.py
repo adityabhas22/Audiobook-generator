@@ -15,27 +15,23 @@ class Settings(BaseSettings):
     max_text_length: int = 500  # Maximum number of characters for sample
     
     # CORS Settings
-    allowed_origins: List[str] = []
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        # Default origins for development
-        default_origins = [
-            "http://localhost:3000",
-            "http://localhost:8000",
-            "https://*.vercel.app"
-        ]
-        
-        # Get origins from environment variable if set
-        env_origins = os.getenv("ALLOWED_ORIGINS")
-        if env_origins:
-            self.allowed_origins = env_origins.split(",")
-        else:
-            self.allowed_origins = default_origins
+    # Default origins for development and production
+    allowed_origins: List[str] = [
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "https://audiobook-generator-two.vercel.app"
+    ]
     
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+
+    def get_cors_origins(self) -> List[str]:
+        """Get CORS origins from environment or use defaults"""
+        env_origins = os.getenv("ALLOWED_ORIGINS")
+        if env_origins:
+            return [origin.strip() for origin in env_origins.split(",")]
+        return self.allowed_origins
 
 @lru_cache()
 def get_settings() -> Settings:
