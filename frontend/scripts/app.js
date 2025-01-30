@@ -142,6 +142,8 @@ class App {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'audio/mpeg',
+                    'Origin': window.location.origin
                 },
                 body: JSON.stringify({
                     text: text,

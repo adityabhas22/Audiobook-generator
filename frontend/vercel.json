@@ -21,6 +21,6 @@
         }
     ],
     "env": {
-        "NEXT_PUBLIC_API_URL": "https://your-render-app.onrender.com"
+        "NEXT_PUBLIC_API_URL": "https://audiobook-generator-w1tf.onrender.com"
     }
 } 
