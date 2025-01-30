@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Audiobook Sample Generator</title>
     <link rel="stylesheet" href="styles/main.css">
+    <script>
+        // This will be replaced by Vercel with the actual environment variable
+        window.ENV_API_URL = '{{NEXT_PUBLIC_API_URL}}';
+    </script>
 </head>
 <body>
     <div class="container">
@@ -64,8 +68,8 @@
         </div>
     </div>
 
-    <script src="scripts/fileHandler.js"></script>
-    <script src="scripts/audioPlayer.js"></script>
-    <script src="scripts/app.js"></script>
+    <script src="scripts/config.js" type="module"></script>
+    <script src="scripts/fileHandler.js" type="module"></script>
+    <script src="scripts/app.js" type="module"></script>
 </body>
 </html> 
