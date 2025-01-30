@@ -1,7 +1,6 @@
+// Direct URL to the backend API
 const config = {
-    // In development, use localhost
-    // In production, this will be replaced with the Render URL
-    API_URL: window.ENV_API_URL || 'http://localhost:8001',
+    API_URL: 'https://audiobook-generator-w1tf.onrender.com'
 };
 
 export default config; 

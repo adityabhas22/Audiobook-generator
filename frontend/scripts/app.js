@@ -48,16 +48,26 @@ class App {
 
     async loadVoices() {
         try {
+            console.log('Fetching voices from:', `${config.API_URL}/api/voices`);
             const response = await fetch(`${config.API_URL}/api/voices`);
+            
             if (!response.ok) {
-                throw new Error('Failed to load voices');
+                const errorText = await response.text();
+                console.error('Server response:', errorText);
+                throw new Error(`Failed to load voices: ${response.status} ${response.statusText}`);
             }
 
             const data = await response.json();
+            console.log('Received voices:', data);
+            
+            if (!data || !Array.isArray(data.voices)) {
+                throw new Error('Invalid response format');
+            }
+
             this.populateVoiceSelect(data.voices);
         } catch (error) {
-            console.error('Error loading voices:', error);
-            alert('Error loading voices');
+            console.error('Detailed error:', error);
+            alert('Error loading voices. Check console for details.');
         }
     }
 
@@ -193,5 +203,6 @@ class App {
     }
 }
 
-// Initialize the app
-const app = new App(); 
+// Initialize and export the app instance
+const app = new App();
+export default app; 
