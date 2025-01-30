@@ -25,9 +25,9 @@ body {
 }
 
 .container {
-    max-width: 800px;
+    max-width: 1000px;
     margin: 2rem auto;
-    padding: 0 1rem;
+    padding: 0 4rem;
 }
 
 h1, h2, h3 {
@@ -110,10 +110,11 @@ h1 {
 .text-selection-container {
     position: relative;
     margin-bottom: 1rem;
-    height: 400px;  /* Fixed height */
+    height: 400px;
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    margin-right: 60px;
 }
 
 .text-content-wrapper {
@@ -123,6 +124,7 @@ h1 {
     border-radius: 8px;
     background: white;
     height: 100%;
+    margin-bottom: 1rem;
 }
 
 .text-content {
@@ -136,7 +138,7 @@ h1 {
 
 .text-navigation {
     position: absolute;
-    right: -60px;
+    right: -70px;
     top: 50%;
     transform: translateY(-50%);
     display: flex;
@@ -147,6 +149,7 @@ h1 {
     padding: 0.5rem;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    z-index: 100;
 }
 
 .nav-controls {
@@ -155,6 +158,8 @@ h1 {
     align-items: center;
     gap: 1rem;
     margin-top: 0.5rem;
+    margin-right: 60px;
+    margin-bottom: 1rem;
 }
 
 .page-info {
@@ -196,6 +201,8 @@ h1 {
     border-top: 1px solid var(--border-color);
     margin-top: 1rem;
     z-index: 10;
+    margin-right: 60px;
+    text-align: center;
 }
 
 .scroll-indicator {
