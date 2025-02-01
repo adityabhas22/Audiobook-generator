@@ -1,10 +1,10 @@
 import { API_URL, MAX_SAMPLE_LENGTH } from './config.js';
-import books from './books.js';
+import { Books } from './books.js';
 
 class App {
     constructor() {
         // Initialize Books
-        this.books = books;
+        this.books = new Books();
         this.books.setApp(this);
         
         // Views

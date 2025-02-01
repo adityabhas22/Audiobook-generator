@@ -8,51 +8,21 @@ class Auth {
         this.setupEventListeners();
     }
 
-    async fetchWithCredentials(url, options = {}) {
-        const defaultOptions = {
-            credentials: 'include',
-            headers: {
-                ...options.headers,
-                'Accept': 'application/json'
-            }
-        };
-
-        try {
-            const response = await fetch(url, {
-                ...defaultOptions,
-                ...options,
-                headers: {
-                    ...defaultOptions.headers,
-                    ...options.headers
-                }
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => null);
-                throw new Error(errorData?.detail || `HTTP error! status: ${response.status}`);
-            }
-
-            return response;
-        } catch (error) {
-            console.error('Fetch error:', error);
-            throw error;
-        }
-    }
-
     async initializeAuth() {
         try {
-            const response = await this.fetchWithCredentials(`${API_URL}/users/me`);
-            this.user = await response.json();
-            this.isAuthenticated = true;
-            this.updateUI();
-            document.dispatchEvent(new CustomEvent('authStateChanged', { 
-                detail: { isAuthenticated: true, user: this.user }
-            }));
+            const response = await fetch(`${API_URL}/users/me`, {
+                credentials: 'include'
+            });
+            if (response.ok) {
+                this.user = await response.json();
+                this.isAuthenticated = true;
+                this.updateUI();
+                document.dispatchEvent(new CustomEvent('authStateChanged', { 
+                    detail: { isAuthenticated: true, user: this.user }
+                }));
+            }
         } catch (error) {
             console.error('Error checking auth state:', error);
-            this.isAuthenticated = false;
-            this.user = null;
-            this.updateUI();
         }
     }
 
@@ -115,55 +85,66 @@ class Auth {
         formData.append('username', email);
         formData.append('password', password);
 
-        try {
-            await this.fetchWithCredentials(`${API_URL}/auth/jwt/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: formData
-            });
+        const response = await fetch(`${API_URL}/auth/jwt/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formData,
+            credentials: 'include'
+        });
 
-            const userResponse = await this.fetchWithCredentials(`${API_URL}/users/me`);
-            this.user = await userResponse.json();
-            this.isAuthenticated = true;
-            this.updateUI();
-            document.getElementById('auth-modal').classList.add('hidden');
-            document.dispatchEvent(new CustomEvent('authStateChanged', { 
-                detail: { isAuthenticated: true, user: this.user }
-            }));
-        } catch (error) {
+        if (!response.ok) {
             throw new Error('Login failed. Please check your credentials.');
         }
+
+        const userResponse = await fetch(`${API_URL}/users/me`, {
+            credentials: 'include'
+        });
+
+        if (!userResponse.ok) {
+            throw new Error('Failed to get user information after login.');
+        }
+
+        this.user = await userResponse.json();
+        this.isAuthenticated = true;
+        this.updateUI();
+        document.getElementById('auth-modal').classList.add('hidden');
+        document.dispatchEvent(new CustomEvent('authStateChanged', { 
+            detail: { isAuthenticated: true, user: this.user }
+        }));
     }
 
     async register(email, password, name) {
-        try {
-            await this.fetchWithCredentials(`${API_URL}/auth/register`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    email,
-                    password,
-                    name,
-                    is_active: true,
-                    is_superuser: false,
-                    is_verified: false
-                })
-            });
+        const response = await fetch(`${API_URL}/auth/register`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                email,
+                password,
+                name,
+                is_active: true,
+                is_superuser: false,
+                is_verified: false
+            }),
+            credentials: 'include'
+        });
 
-            await this.login(email, password);
-        } catch (error) {
-            throw new Error('Registration failed. ' + (error.message || 'Please try again.'));
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Registration failed. Please try again.');
         }
+
+        await this.login(email, password);
     }
 
     async handleLogout() {
         try {
-            await this.fetchWithCredentials(`${API_URL}/auth/jwt/logout`, {
-                method: 'POST'
+            await fetch(`${API_URL}/auth/jwt/logout`, {
+                method: 'POST',
+                credentials: 'include'
             });
             
             this.isAuthenticated = false;
@@ -177,10 +158,6 @@ class Auth {
             document.getElementById('books-view').classList.remove('hidden');
         } catch (error) {
             console.error('Logout error:', error);
-            // Still update UI even if logout fails
-            this.isAuthenticated = false;
-            this.user = null;
-            this.updateUI();
         }
     }
 
