@@ -34,6 +34,7 @@ cookie_transport = DebugCookieTransport(
     cookie_httponly=True,
     cookie_samesite="none",  # Required for cross-site cookies in production
     cookie_path="/",  # Ensure cookie is available for all paths
+    cookie_domain="audiobook-generator-backend.onrender.com"  # Match the Render domain
 )
 
 # JWT Strategy with better error handling

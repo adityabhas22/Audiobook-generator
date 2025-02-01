@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     api_description: str = "API for generating audiobook samples using ElevenLabs TTS"
     
     # CORS Settings
-    allowed_origins: str = '["http://localhost:3000","http://localhost:3001","http://localhost:8000","https://audiobook-generator-two.vercel.app","https://audiobook-generator.vercel.app"]'
+    allowed_origins: str = '["http://localhost:3000","http://localhost:3001","http://localhost:8000","https://audiobook-generator-two.vercel.app"]'
     
     # Database Settings
     database_url: str
