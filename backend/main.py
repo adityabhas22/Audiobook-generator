@@ -24,6 +24,10 @@ app.add_middleware(
     expose_headers=["Set-Cookie"]
 )
 
+@app.get("/")
+async def root():
+    return {"status": "ok", "message": "API is running"}
+
 # Include routers
 app.include_router(auth.router, prefix="/api")  # Include auth routes first
 app.include_router(api.router, prefix="/api") 
