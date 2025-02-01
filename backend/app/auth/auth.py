@@ -32,8 +32,8 @@ cookie_transport = DebugCookieTransport(
     cookie_max_age=3600,
     cookie_secure=True,  # Required for production HTTPS
     cookie_httponly=True,
-    cookie_samesite="lax",
-    # No cookie_domain set - let it use the default domain behavior
+    cookie_samesite="none",  # Required for cross-site cookies in production
+    cookie_path="/",  # Ensure cookie is available for all paths
 )
 
 # JWT Strategy with better error handling
