@@ -1,7 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import api
+from app.routers import api, auth
 from app.config import get_settings, get_allowed_origins
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 settings = get_settings()
 
@@ -17,7 +21,9 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Set-Cookie"]
 )
 
 # Include routers
+app.include_router(auth.router, prefix="/api")  # Include auth routes first
 app.include_router(api.router, prefix="/api") 

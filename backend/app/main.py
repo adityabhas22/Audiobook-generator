@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from app.routers import api
+from app.routers import api, auth
 from app.config import get_settings
 from app.models import ErrorResponse
 
@@ -26,6 +26,7 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(auth.router, prefix="/api")
 app.include_router(api.router, prefix="/api")
 
 @app.exception_handler(Exception)

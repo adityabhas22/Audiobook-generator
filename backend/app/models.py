@@ -1,5 +1,12 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING, ForwardRef
+from datetime import datetime
+from sqlalchemy import String, Text, DateTime, ForeignKey, JSON, Integer
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from .database import Base
+
+if TYPE_CHECKING:
+    from .auth.models import User
 
 class Voice(BaseModel):
     """Voice model"""
@@ -26,4 +33,24 @@ class GenerateAudioRequest(BaseModel):
 
 class ErrorResponse(BaseModel):
     """Error response model"""
-    detail: str 
+    detail: str
+
+class Book(Base):
+    __tablename__ = "books"
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    title: Mapped[str] = mapped_column(String(255))
+    content: Mapped[str] = mapped_column(Text)
+    upload_date: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    last_voice_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    voice_settings: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+
+    # Relationship to user
+    if TYPE_CHECKING:
+        user: Mapped["User"]
+    else:
+        user: Mapped[ForwardRef("User")] = relationship("User", back_populates="books")
+
+    def __repr__(self) -> str:
+        return f"Book(id={self.id}, title={self.title}, user_id={self.user_id})" 

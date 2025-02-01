@@ -1,56 +1,59 @@
-import config from './config.js';
-import app from './app.js';
+import { API_URL } from './config.js';
+import auth from './auth.js';
+import books from './books.js';
 
 class FileHandler {
     constructor() {
-        this.dropZone = document.getElementById('drop-zone');
-        this.fileInput = document.getElementById('file-input');
-        this.selectButton = document.getElementById('select-file-btn');
+        this.setupDropZone();
+        this.setupFileInput();
+    }
+
+    setupDropZone() {
+        const dropZone = document.getElementById('drop-zone');
         
-        this.setupEventListeners();
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                await this.handleFile(file);
+            }
+        });
     }
 
-    setupEventListeners() {
-        // Drag and drop events
-        this.dropZone.addEventListener('dragover', (e) => this.handleDragOver(e));
-        this.dropZone.addEventListener('dragleave', (e) => this.handleDragLeave(e));
-        this.dropZone.addEventListener('drop', (e) => this.handleDrop(e));
+    setupFileInput() {
+        const fileInput = document.getElementById('file-input');
+        const selectButton = document.getElementById('select-file-btn');
+        
+        selectButton.addEventListener('click', () => {
+            fileInput.click();
+        });
 
-        // Click to select file
-        this.selectButton.addEventListener('click', () => this.fileInput.click());
-        this.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                await this.handleFile(file);
+            }
+        });
     }
 
-    handleDragOver(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        this.dropZone.classList.add('drag-over');
-    }
+    async handleFile(file) {
+        if (!auth.isAuthenticated) {
+            alert('Please sign in to upload books');
+            return;
+        }
 
-    handleDragLeave(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        this.dropZone.classList.remove('drag-over');
-    }
-
-    handleDrop(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        this.dropZone.classList.remove('drag-over');
-
-        const file = e.dataTransfer.files[0];
-        this.processFile(file);
-    }
-
-    handleFileSelect(e) {
-        const file = e.target.files[0];
-        this.processFile(file);
-    }
-
-    async processFile(file) {
-        if (!file) return;
-
-        if (!file.name.match(/\.(txt|epub)$/)) {
+        if (!file.name.endsWith('.txt') && !file.name.endsWith('.epub')) {
             alert('Please upload a .txt or .epub file');
             return;
         }
@@ -59,23 +62,29 @@ class FileHandler {
         formData.append('file', file);
 
         try {
-            const response = await fetch(`${config.API_URL}/api/upload`, {
+            const response = await fetch(`${API_URL}/upload`, {
                 method: 'POST',
-                body: formData
+                body: formData,
+                credentials: 'include'
             });
 
             if (!response.ok) {
                 throw new Error('Upload failed');
             }
 
-            const data = await response.json();
-            app.showTextView(data.content);
+            const book = await response.json();
+            
+            // Refresh books list and show text view
+            await books.loadBooks();
+            books.handleGenerateAudio(book);
+            
         } catch (error) {
-            console.error('Error:', error);
-            alert('Error uploading file');
+            console.error('Upload error:', error);
+            alert('Failed to upload file. Please try again.');
         }
     }
 }
 
-// Initialize the file handler
-const fileHandler = new FileHandler(); 
+// Initialize file handler
+const fileHandler = new FileHandler();
+export default fileHandler; 

@@ -1,6 +1,7 @@
-// Direct URL to the backend API
-const config = {
-    API_URL: 'https://audiobook-generator-w1tf.onrender.com'
-};
+// API configuration
+export const API_URL = process.env.NODE_ENV === 'production' 
+    ? 'https://audiobook-generator-backend.onrender.com/api'
+    : 'http://localhost:8000/api';
 
-export default config; 
+// Text selection configuration
+export const MAX_SAMPLE_LENGTH = 5000;  // Maximum characters for audio sample 

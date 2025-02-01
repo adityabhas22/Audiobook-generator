@@ -7,10 +7,66 @@
     <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="auth-title">Sign In</h2>
+                <button class="close-button" onclick="document.getElementById('auth-modal').classList.add('hidden')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="auth-form">
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" required>
+                    </div>
+                    <div id="name-group" class="form-group hidden">
+                        <label for="name">Name</label>
+                        <input type="text" id="name">
+                    </div>
+                    <div class="auth-actions">
+                        <button id="auth-submit" class="primary-button">Sign In</button>
+                        <button id="auth-toggle" class="text-button">Need an account? Sign Up</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Menu -->
+    <div class="user-menu">
+        <div id="user-section" class="hidden">
+            <span id="user-name"></span>
+            <button id="logout-btn" class="text-button">Logout</button>
+        </div>
+        <div id="auth-section">
+            <button id="login-btn" class="secondary-button">Sign In</button>
+            <button id="register-btn" class="primary-button">Sign Up</button>
+        </div>
+    </div>
+
+    <!-- Book List View -->
+    <div id="books-view" class="view">
+        <h1>My Books</h1>
+        <div class="books-grid" id="books-grid">
+            <!-- Books will be added here dynamically -->
+        </div>
+        <div class="upload-action">
+            <button id="upload-new-book" class="primary-button">+ Add New Book</button>
+        </div>
+    </div>
+
     <div class="container">
         <!-- Initial Upload View -->
-        <div id="upload-view" class="view">
-            <h1>Create Audiobook Sample</h1>
+        <div id="upload-view" class="view hidden">
+            <div class="header-actions">
+                <h1>Create Audiobook Sample</h1>
+                <button id="back-to-books" class="text-button">← Back to Books</button>
+            </div>
             
             <div class="upload-section">
                 <div id="drop-zone" class="drop-zone">
@@ -38,51 +94,82 @@
             </div>
         </div>
 
-        <!-- Text Selection View -->
+        <!-- Text View -->
         <div id="text-view" class="view hidden">
-            <div class="header-actions">
-                <h2>Select Text for Sample</h2>
-                <button id="back-to-upload" class="text-button">← Back to Upload</button>
-            </div>
+            <!-- Top Navigation -->
+            <nav class="top-nav">
+                <div class="nav-left">
+                    <button id="back-to-books" class="icon-button">
+                        <span class="icon">←</span> Back to Books
+                    </button>
+                    <h1 id="book-title" class="book-title"></h1>
+                </div>
+            </nav>
 
-            <div class="text-selection-container">
-                <div class="text-content-wrapper">
-                    <div id="text-content" class="text-content" contenteditable="true"></div>
-                </div>
-                <div class="selection-info hidden">
-                    <span>Selected: <span id="selection-length">0</span> characters (max 500 for sample)</span>
-                </div>
-                <div class="text-navigation">
-                    <button id="scroll-top" class="nav-button" title="Go to top">↑</button>
-                    <button id="page-up" class="nav-button" title="Previous page">▲</button>
-                    <div class="page-info">
-                        Page <span id="current-page">1</span>
+            <!-- Main Reader Container -->
+            <div class="reader-container">
+                <!-- Book Viewer -->
+                <div class="book-viewer">
+                    <div class="book-content">
+                        <div id="text-content" class="text-content"></div>
                     </div>
-                    <button id="page-down" class="nav-button" title="Next page">▼</button>
-                    <button id="scroll-bottom" class="nav-button" title="Go to bottom">↓</button>
+                    <div class="book-navigation">
+                        <button class="nav-button prev-page" id="prev-page">
+                            <span class="icon">←</span>
+                        </button>
+                        <span class="page-counter"></span>
+                        <button class="nav-button next-page" id="next-page">
+                            <span class="icon">→</span>
+                        </button>
+                    </div>
                 </div>
-            </div>
 
-            <div class="nav-controls">
-                <button id="prev-page" class="secondary-button">← Previous</button>
-                <span class="page-info">Page <span id="page-number">1</span></span>
-                <button id="next-page" class="secondary-button">Next →</button>
-            </div>
+                <!-- Controls Panel -->
+                <div class="controls-panel">
+                    <!-- Voice Selection -->
+                    <div class="panel-section">
+                        <h3>Voice Selection</h3>
+                        <select id="voice-select" class="voice-dropdown">
+                            <option value="">Select a voice...</option>
+                        </select>
+                        <button id="preview-voice-btn" class="secondary-button" disabled>
+                            Preview Voice
+                        </button>
+                        <div id="voice-preview-player" class="audio-player hidden">
+                            <audio id="preview-audio" controls></audio>
+                        </div>
+                    </div>
 
-            <div class="actions">
-                <button id="generate-btn" class="primary-button" disabled>Generate Sample</button>
-            </div>
+                    <!-- Text Selection -->
+                    <div class="panel-section">
+                        <h3>Text Selection</h3>
+                        <div class="selection-info">
+                            <span id="selection-length">0</span> characters selected
+                        </div>
+                        <button id="generate-btn" class="primary-button" disabled>
+                            Generate Audio Sample
+                        </button>
+                    </div>
 
-            <div id="sample-player" class="audio-player hidden">
-                <h3>Generated Sample</h3>
-                <audio id="sample-audio" controls></audio>
-                <button id="download-btn" class="secondary-button">Download Sample</button>
+                    <!-- Generated Sample -->
+                    <div class="panel-section">
+                        <h3>Generated Sample</h3>
+                        <div id="sample-player" class="audio-player hidden">
+                            <audio id="sample-audio" controls></audio>
+                            <button id="download-btn" class="secondary-button" disabled>
+                                Download Sample
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Load modules in correct order -->
     <script src="scripts/config.js" type="module"></script>
+    <script src="scripts/auth.js" type="module"></script>
+    <script src="scripts/books.js" type="module"></script>
     <script src="scripts/app.js" type="module"></script>
     <script src="scripts/fileHandler.js" type="module"></script>
 </body>

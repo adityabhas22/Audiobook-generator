@@ -1,10 +1,106 @@
-from fastapi import APIRouter, UploadFile, HTTPException
+from fastapi import APIRouter, UploadFile, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from app.services import text_processor, tts_service
-from app.models import GenerateAudioRequest, VoicesResponse, ErrorResponse
+from app.models import GenerateAudioRequest, VoicesResponse, ErrorResponse, Book
+from app.auth.models import User
+from app.auth.auth import current_active_user
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.database import get_async_session
+from sqlalchemy import select
 import io
 
 router = APIRouter()
+
+# Book-related endpoints
+@router.get("/books")
+async def get_user_books(
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session)
+):
+    """Get all books for the current user"""
+    query = select(Book).where(Book.user_id == user.id)
+    result = await session.execute(query)
+    books = result.scalars().all()
+    return books
+
+@router.post("/books")
+async def create_book(
+    title: str,
+    content: str,
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session)
+):
+    """Create a new book for the current user"""
+    book = Book(
+        title=title,
+        content=content,
+        user_id=user.id
+    )
+    session.add(book)
+    await session.commit()
+    await session.refresh(book)
+    return book
+
+@router.get("/books/{book_id}")
+async def get_book(
+    book_id: int,
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session)
+):
+    """Get a specific book for the current user"""
+    query = select(Book).where(Book.id == book_id, Book.user_id == user.id)
+    result = await session.execute(query)
+    book = result.scalar_one_or_none()
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+    return book
+
+@router.put("/books/{book_id}")
+async def update_book(
+    book_id: int,
+    title: str = None,
+    content: str = None,
+    last_voice_id: str = None,
+    voice_settings: dict = None,
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session)
+):
+    """Update a book for the current user"""
+    query = select(Book).where(Book.id == book_id, Book.user_id == user.id)
+    result = await session.execute(query)
+    book = result.scalar_one_or_none()
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+    if title is not None:
+        book.title = title
+    if content is not None:
+        book.content = content
+    if last_voice_id is not None:
+        book.last_voice_id = last_voice_id
+    if voice_settings is not None:
+        book.voice_settings = voice_settings
+    
+    await session.commit()
+    await session.refresh(book)
+    return book
+
+@router.delete("/books/{book_id}")
+async def delete_book(
+    book_id: int,
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session)
+):
+    """Delete a book for the current user"""
+    query = select(Book).where(Book.id == book_id, Book.user_id == user.id)
+    result = await session.execute(query)
+    book = result.scalar_one_or_none()
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+    await session.delete(book)
+    await session.commit()
+    return {"detail": "Book deleted successfully"}
 
 @router.post(
     "/upload",
@@ -13,7 +109,11 @@ router = APIRouter()
         500: {"model": ErrorResponse}
     }
 )
-async def upload_file(file: UploadFile):
+async def upload_file(
+    file: UploadFile,
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session)
+):
     """
     Upload a text or epub file and extract its content
     
@@ -21,7 +121,7 @@ async def upload_file(file: UploadFile):
         file: The file to upload (.txt or .epub)
         
     Returns:
-        dict: The extracted text content
+        dict: The created book with extracted content
         
     Raises:
         HTTPException: If file format is unsupported or processing fails
@@ -34,7 +134,16 @@ async def upload_file(file: UploadFile):
     
     try:
         content = await text_processor.extract_text(file)
-        return {"content": content}
+        # Create a new book for the user
+        book = Book(
+            title=file.filename,
+            content=content,
+            user_id=user.id
+        )
+        session.add(book)
+        await session.commit()
+        await session.refresh(book)
+        return book
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

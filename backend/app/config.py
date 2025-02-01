@@ -7,6 +7,23 @@ class Settings(BaseSettings):
     api_title: str = "Audiobook Generator API"
     api_description: str = "API for generating audiobook samples using ElevenLabs TTS"
     
+    # CORS Settings
+    allowed_origins: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:8000",
+        "https://audiobook-generator-two.vercel.app"
+    ]
+    
+    # Database Settings
+    database_url: str
+    async_database_url: str | None = None
+    
+    # Authentication Settings
+    jwt_secret: str
+    reset_password_secret: str
+    verification_secret: str
+    
     # ElevenLabs Settings
     elevenlabs_api_key: str
     default_voice: str = "Adam"
@@ -25,6 +42,7 @@ def get_allowed_origins():
     """Get allowed origins for CORS"""
     return [
         "http://localhost:3000",
+        "http://localhost:3001",
         "http://localhost:8000",
         "https://audiobook-generator-two.vercel.app"
     ] 

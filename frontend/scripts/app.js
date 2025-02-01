@@ -1,19 +1,25 @@
-import config from './config.js';
+import { API_URL, MAX_SAMPLE_LENGTH } from './config.js';
+import { Books } from './books.js';
 
 class App {
     constructor() {
+        // Initialize Books
+        this.books = new Books();
+        this.books.setApp(this);
+        
         // Views
         this.uploadView = document.getElementById('upload-view');
         this.textView = document.getElementById('text-view');
         
-        // Voice selection
-        this.voiceSelect = document.getElementById('voice-select');
-        this.previewVoiceBtn = document.getElementById('preview-voice-btn');
-        this.previewAudio = document.getElementById('preview-audio');
-        this.voicePreviewPlayer = document.getElementById('voice-preview-player');
+        // Voice selection (both views)
+        this.voiceSelects = document.querySelectorAll('#voice-select');
+        this.previewVoiceBtns = document.querySelectorAll('#preview-voice-btn');
+        this.previewAudios = document.querySelectorAll('#preview-audio');
+        this.voicePreviewPlayers = document.querySelectorAll('#voice-preview-player');
         
         // Text selection
         this.textContent = document.getElementById('text-content');
+        this.bookTitle = document.getElementById('book-title');
         this.selectionLength = document.getElementById('selection-length');
         this.selectionInfo = document.querySelector('.selection-info');
         this.generateButton = document.getElementById('generate-btn');
@@ -24,143 +30,217 @@ class App {
         this.downloadButton = document.getElementById('download-btn');
         
         // Navigation
-        this.backButton = document.getElementById('back-to-upload');
+        this.prevButton = document.getElementById('prev-page');
+        this.nextButton = document.getElementById('next-page');
+        this.currentPageSpan = document.getElementById('current-page');
+        this.totalPagesSpan = document.getElementById('total-pages');
         
         this.currentSelection = { start: 0, end: 0 };
         this.pageSize = 400; // Height of visible content in pixels
         this.currentPage = 1;
+        
+        // Initialize state
+        this.pages = [];
+        this.selectedText = '';
+        
+        // Add tracking for used text ranges
+        this.usedRanges = [];
+        this.MAX_SAMPLE_LENGTH = 200;
+        
+        // Back buttons (handle both instances)
+        this.backButtons = document.querySelectorAll('#back-to-books, .icon-button');
+        
+        // Bind methods
+        this.handleTextSelection = this.handleTextSelection.bind(this);
+        this.nextPage = this.nextPage.bind(this);
+        this.prevPage = this.prevPage.bind(this);
+        
+        // Initialize immediately
         this.loadVoices();
         this.setupEventListeners();
     }
 
     setupEventListeners() {
-        // Voice preview
-        this.previewVoiceBtn.addEventListener('click', () => this.previewVoice());
+        // Voice preview for all voice buttons
+        this.previewVoiceBtns.forEach(btn => {
+            btn.addEventListener('click', () => this.previewVoice());
+        });
         
         // Text selection
-        this.textContent.addEventListener('mouseup', () => this.handleTextSelection());
-        this.generateButton.addEventListener('click', () => this.generateSample());
+        this.textContent?.addEventListener('mouseup', this.handleTextSelection);
+        this.generateButton?.addEventListener('click', () => this.generateSample());
         
         // Navigation
-        this.backButton.addEventListener('click', () => this.showUploadView());
+        this.prevButton?.addEventListener('click', this.prevPage);
+        this.nextButton?.addEventListener('click', this.nextPage);
+        
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                this.nextPage();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                this.prevPage();
+            }
+        });
         
         // Download
-        this.downloadButton.addEventListener('click', () => this.downloadSample());
-
-        // Page navigation
-        document.getElementById('page-up')?.addEventListener('click', () => this.prevPage());
-        document.getElementById('page-down')?.addEventListener('click', () => this.nextPage());
-        document.getElementById('prev-page')?.addEventListener('click', () => this.prevPage());
-        document.getElementById('next-page')?.addEventListener('click', () => this.nextPage());
+        this.downloadButton?.addEventListener('click', () => this.downloadSample());
         
-        // Scroll navigation
-        document.getElementById('scroll-top')?.addEventListener('click', () => {
-            this.textContent.scrollTo({ top: 0, behavior: 'smooth' });
-            this.currentPage = 1;
-            this.updatePageInfo();
-        });
-        
-        document.getElementById('scroll-bottom')?.addEventListener('click', () => {
-            this.textContent.scrollTo({ 
-                top: this.textContent.scrollHeight,
-                behavior: 'smooth'
-            });
-            this.currentPage = this.getTotalPages();
-            this.updatePageInfo();
-        });
-
-        // Track scroll for page updates
-        this.textContent.addEventListener('scroll', () => {
-            this.currentPage = Math.ceil(this.textContent.scrollTop / this.pageSize) + 1;
-            this.updatePageInfo();
+        // Back to books grid - handle all back buttons
+        this.backButtons.forEach(button => {
+            button.addEventListener('click', () => this.showBooksView());
         });
     }
 
     async loadVoices() {
         try {
-            console.log('Fetching voices from:', `${config.API_URL}/api/voices`);
-            const response = await fetch(`${config.API_URL}/api/voices`);
+            const response = await fetch(`${API_URL}/voices`, {
+                credentials: 'include'
+            });
             
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Server response:', errorText);
-                throw new Error(`Failed to load voices: ${response.status} ${response.statusText}`);
+                throw new Error('Failed to load voices');
             }
 
             const data = await response.json();
-            console.log('Received voices:', data);
-            
-            if (!data || !Array.isArray(data.voices)) {
-                throw new Error('Invalid response format');
-            }
-
             this.populateVoiceSelect(data.voices);
         } catch (error) {
-            console.error('Detailed error:', error);
-            alert('Error loading voices. Check console for details.');
+            console.error('Error loading voices:', error);
+            this.voiceSelects.forEach(select => {
+                select.innerHTML = '<option value="">Failed to load voices</option>';
+            });
         }
     }
 
     populateVoiceSelect(voices) {
-        this.voiceSelect.innerHTML = '';
-        voices.forEach(voice => {
-            const option = document.createElement('option');
-            option.value = voice.voice_id;
-            option.textContent = voice.name;
-            this.voiceSelect.appendChild(option);
+        if (!voices || voices.length === 0) {
+            this.voiceSelects.forEach(select => {
+                select.innerHTML = '<option value="">No voices available</option>';
+            });
+            return;
+        }
+
+        const options = voices.map(voice => 
+            `<option value="${voice.voice_id}">${voice.name}</option>`
+        ).join('');
+
+        this.voiceSelects.forEach(select => {
+            select.innerHTML = '<option value="">Select a voice...</option>' + options;
+        });
+        
+        // Enable preview buttons if voices are available
+        this.previewVoiceBtns.forEach(btn => {
+            btn.disabled = false;
         });
     }
 
     async previewVoice() {
-        const voiceId = this.voiceSelect.value;
-        if (!voiceId) return;
+        // Get the voice select from the current view
+        const currentView = document.querySelector('.view:not(.hidden)');
+        const voiceSelect = currentView.querySelector('#voice-select');
+        const previewPlayer = currentView.querySelector('#voice-preview-player');
+        const previewAudio = currentView.querySelector('#preview-audio');
+
+        const voiceId = voiceSelect.value;
+        if (!voiceId) {
+            alert('Please select a voice first.');
+            return;
+        }
 
         try {
-            const response = await fetch(`${config.API_URL}/api/voice-preview/${voiceId}`);
+            const response = await fetch(`${API_URL}/voice-preview/${voiceId}`, {
+                credentials: 'include'
+            });
+
             if (!response.ok) {
-                throw new Error('Failed to generate preview');
+                throw new Error('Failed to get voice preview');
             }
 
             const audioBlob = await response.blob();
             const audioUrl = URL.createObjectURL(audioBlob);
-            this.previewAudio.src = audioUrl;
-            this.voicePreviewPlayer.classList.remove('hidden');
-            this.previewAudio.play();
+            
+            previewAudio.src = audioUrl;
+            previewPlayer.classList.remove('hidden');
+            previewAudio.play();
         } catch (error) {
             console.error('Error previewing voice:', error);
-            alert('Error generating voice preview');
+            alert('Failed to preview voice. Please try again.');
         }
     }
 
     handleTextSelection() {
         const selection = window.getSelection();
-        const text = selection.toString().trim();
-        const MAX_SAMPLE_LENGTH = 500;
+        if (!selection.rangeCount) return;
 
-        if (text) {
-            const range = selection.getRangeAt(0);
-            this.currentSelection = {
-                start: this.getTextOffset(range.startContainer, range.startOffset),
-                end: this.getTextOffset(range.endContainer, range.endOffset)
-            };
-            
-            const selectionLength = text.length;
-            this.selectionLength.textContent = `${selectionLength}/${MAX_SAMPLE_LENGTH}`;
-            this.selectionInfo.classList.remove('hidden');
-            this.generateButton.disabled = selectionLength > MAX_SAMPLE_LENGTH;
-            
-            if (selectionLength > MAX_SAMPLE_LENGTH) {
-                alert(`Selection too long. Maximum length is ${MAX_SAMPLE_LENGTH} characters.`);
-            }
-        } else {
-            this.currentSelection = { start: 0, end: 0 };
-            this.selectionInfo.classList.add('hidden');
+        const range = selection.getRangeAt(0);
+        if (!range) return;
+
+        // Only handle selections within the text content
+        if (!this.textContent.contains(range.commonAncestorContainer)) return;
+
+        const text = selection.toString().trim();
+        const length = text.length;
+
+        // Get the selection position relative to the entire text content
+        const selectionStart = this.getTextOffset(range.startContainer, range.startOffset);
+        const selectionEnd = this.getTextOffset(range.endContainer, range.endOffset);
+
+        // Check if this range overlaps with any previously used range
+        const isOverlapping = this.usedRanges.some(used => {
+            return (selectionStart >= used.start && selectionStart <= used.end) ||
+                   (selectionEnd >= used.start && selectionEnd <= used.end) ||
+                   (used.start >= selectionStart && used.start <= selectionEnd);
+        });
+
+        // Update UI with selection info
+        const selectionControls = document.querySelector('.selection-controls');
+        
+        if (length === 0) {
+            selectionControls?.classList.add('hidden');
             this.generateButton.disabled = true;
+            return;
         }
+
+        // Show selection controls
+        selectionControls?.classList.remove('hidden');
+        
+        // Update selection length
+        if (this.selectionLength) {
+            this.selectionLength.textContent = length.toLocaleString();
+        }
+
+        // Update generate button state based on all conditions
+        this.generateButton.disabled = length === 0 || 
+                                     length > this.MAX_SAMPLE_LENGTH || 
+                                     isOverlapping;
+        
+        // Add warning if selection is invalid
+        const warningSpan = document.querySelector('.selection-warning') || 
+            document.createElement('span');
+        warningSpan.className = 'selection-warning';
+        
+        if (length > this.MAX_SAMPLE_LENGTH) {
+            warningSpan.textContent = ` (Max ${this.MAX_SAMPLE_LENGTH.toLocaleString()} characters)`;
+            warningSpan.style.color = '#dc3545';
+        } else if (isOverlapping) {
+            warningSpan.textContent = ' (This text has already been used)';
+            warningSpan.style.color = '#dc3545';
+        } else {
+            warningSpan.remove();
+        }
+
+        if (!document.querySelector('.selection-warning') && 
+            (length > this.MAX_SAMPLE_LENGTH || isOverlapping)) {
+            document.querySelector('.selection-info')?.appendChild(warningSpan);
+        }
+
+        // Store selection
+        this.selectedText = text;
+        this.currentSelection = { start: selectionStart, end: selectionEnd };
     }
 
+    // Helper function to get text offset
     getTextOffset(node, offset) {
-        let totalOffset = 0;
         const walker = document.createTreeWalker(
             this.textContent,
             NodeFilter.SHOW_TEXT,
@@ -168,58 +248,435 @@ class App {
             false
         );
 
-        while (walker.nextNode()) {
-            if (walker.currentNode === node) {
-                return totalOffset + offset;
-            }
-            totalOffset += walker.currentNode.length;
+        let currentOffset = 0;
+        let currentNode = walker.nextNode();
+
+        while (currentNode && currentNode !== node) {
+            currentOffset += currentNode.length;
+            currentNode = walker.nextNode();
         }
-        return totalOffset;
+
+        return currentOffset + offset;
     }
 
     async generateSample() {
-        const voiceId = this.voiceSelect.value;
-        if (!voiceId || this.currentSelection.start === this.currentSelection.end) return;
+        // Get the voice select from the current view
+        const currentView = document.querySelector('.view:not(.hidden)');
+        const voiceSelect = currentView.querySelector('#voice-select');
 
-        const text = this.textContent.textContent;
-        
+        if (!this.selectedText || !voiceSelect?.value) {
+            alert('Please select some text and a voice first.');
+            return;
+        }
+
+        if (this.selectedText.length > this.MAX_SAMPLE_LENGTH) {
+            alert(`Selection exceeds maximum length of ${this.MAX_SAMPLE_LENGTH} characters.`);
+            return;
+        }
+
         try {
-            const response = await fetch(`${config.API_URL}/api/generate-sample`, {
+            const response = await fetch(`${API_URL}/generate-sample`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'audio/mpeg',
-                    'Origin': window.location.origin
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    text: text,
-                    voice_id: voiceId,
-                    start_position: this.currentSelection.start,
-                    end_position: this.currentSelection.end
-                })
+                    text: this.selectedText,
+                    voice_id: voiceSelect.value
+                }),
+                credentials: 'include'
             });
 
             if (!response.ok) {
-                throw new Error('Failed to generate sample');
+                throw new Error('Failed to generate audio sample');
             }
 
+            // Add this range to used ranges
+            this.usedRanges.push({
+                start: this.currentSelection.start,
+                end: this.currentSelection.end
+            });
+
+            // Get the audio blob
             const audioBlob = await response.blob();
+            
+            // Create object URL and update audio player
             const audioUrl = URL.createObjectURL(audioBlob);
-            this.sampleAudio.src = audioUrl;
-            this.samplePlayer.classList.remove('hidden');
-            this.sampleAudio.play();
+            
+            // Get the sample player from the current view
+            const samplePlayer = currentView.querySelector('#sample-player');
+            const sampleAudio = currentView.querySelector('#sample-audio');
+            const downloadButton = currentView.querySelector('#download-btn');
+            
+            sampleAudio.src = audioUrl;
+            samplePlayer.classList.remove('hidden');
+            
+            // Store for download
+            this.currentAudioBlob = audioBlob;
+            
+            // Enable download button
+            downloadButton.disabled = false;
+
+            // Clear the selection
+            window.getSelection().removeAllRanges();
+            this.generateButton.disabled = true;
         } catch (error) {
             console.error('Error generating sample:', error);
-            alert('Error generating audio sample');
+            alert('Failed to generate audio sample. Please try again.');
         }
     }
 
-    showTextView(content) {
-        this.uploadView.classList.add('hidden');
-        this.textView.classList.remove('hidden');
-        this.textContent.textContent = content;
+    showBooksView() {
+        // Reset the text view state
+        this.resetTextView();
+        
+        // Hide text view and show books view
+        if (this.textView) {
+            this.textView.classList.add('hidden');
+            this.textView.style.display = 'none';
+        }
+        const booksView = document.getElementById('books-view');
+        if (booksView) {
+            booksView.classList.remove('hidden');
+            booksView.style.display = 'block';
+        }
+        
+        // Reset used ranges when going back to books grid
+        this.usedRanges = [];
+        
+        // Clean up any audio elements
+        if (this.samplePlayer) {
+            this.samplePlayer.classList.add('hidden');
+        }
+        this.voicePreviewPlayers.forEach(player => {
+            if (player) player.classList.add('hidden');
+        });
+        this.previewAudios.forEach(audio => {
+            if (audio) {
+                audio.pause();
+                audio.src = '';
+            }
+        });
+        
+        // Remove any keyboard event listeners
+        if (this._keyboardHandler) {
+            document.removeEventListener('keydown', this._keyboardHandler);
+        }
+
+        // Clear any selections
+        window.getSelection().removeAllRanges();
+        
+        // Reset all buttons to default state
+        if (this.generateButton) this.generateButton.disabled = true;
+        if (this.downloadButton) this.downloadButton.disabled = true;
+        
+        // Reset voice selections
+        this.voiceSelects.forEach(select => {
+            if (select) select.selectedIndex = 0;
+        });
+
+        console.log('Navigated back to books view'); // Debug log
+    }
+
+    showTextView(book) {
+        if (!book || !book.content) {
+            console.error('No book content provided');
+            return;
+        }
+
+        // Hide books view and upload view, show text view
+        document.getElementById('books-view').classList.add('hidden');
+        if (this.uploadView) this.uploadView.classList.add('hidden');
+        if (this.textView) {
+            this.textView.classList.remove('hidden');
+            this.textView.style.display = 'block';
+        }
+
+        // Reset used ranges when opening a new book
+        this.usedRanges = [];
+        
+        // Set book title
+        if (this.bookTitle) {
+            this.bookTitle.textContent = book.title || 'Untitled Book';
+        }
+
+        // Clear any existing content and reset state
+        if (this.textContent) {
+            this.textContent.textContent = '';
+            this.pages = [];
+            this.currentPage = 1;
+        }
+
+        // Initialize pagination with the book content
+        this.initializePagination(book.content);
+
+        // Log total pages created
+        console.log(`Created ${this.pages.length} pages`);
+        
+        // Verify page content
+        this.pages.forEach((content, index) => {
+            console.log(`Page ${index + 1} length: ${content.length} characters`);
+        });
+
+        // Set up keyboard navigation
+        document.removeEventListener('keydown', this._keyboardHandler);
+        this._keyboardHandler = (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                this.nextPage();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                this.prevPage();
+            }
+        };
+        document.addEventListener('keydown', this._keyboardHandler);
+
+        // Force initial display update
+        this.updatePageDisplay();
+    }
+
+    setupTextSelection() {
+        if (!this.textContent) return;
+
+        this.textContent.addEventListener('mouseup', () => {
+            const selection = window.getSelection();
+            const selectedText = selection.toString().trim();
+
+            const selectionControls = document.querySelector('.selection-controls');
+            if (!selectionControls) return;
+
+            if (selectedText) {
+                // Show selection controls near the selection
+                const range = selection.getRangeAt(0);
+                const rect = range.getBoundingClientRect();
+                
+                selectionControls.style.display = 'block';
+                selectionControls.style.top = `${rect.bottom + window.scrollY + 10}px`;
+                selectionControls.style.left = `${rect.left + window.scrollX}px`;
+
+                // Update selection length display
+                const selectionLength = document.querySelector('.selection-length');
+                if (selectionLength) {
+                    const wordCount = selectedText.split(/\s+/).length;
+                    selectionLength.textContent = `${wordCount} words selected`;
+                }
+
+                // Store selected text
+                this.selectedText = selectedText;
+            } else {
+                // Hide selection controls if no text is selected
+                selectionControls.style.display = 'none';
+                this.selectedText = '';
+            }
+        });
+
+        // Hide selection controls when clicking outside
+        document.addEventListener('mousedown', (e) => {
+            const selectionControls = document.querySelector('.selection-controls');
+            if (!selectionControls) return;
+
+            if (!selectionControls.contains(e.target) && e.target !== this.textContent) {
+                selectionControls.style.display = 'none';
+                this.selectedText = '';
+            }
+        });
+    }
+
+    initializePagination(content) {
+        if (!content || !this.textContent) {
+            console.error('Missing content or text container');
+            return;
+        }
+
+        this.pages = [];
         this.currentPage = 1;
-        this.updatePageInfo();
+
+        // Create a temporary container with exact same styling
+        const tempContainer = document.createElement('div');
+        Object.assign(tempContainer.style, {
+            position: 'absolute',
+            visibility: 'hidden',
+            width: `${this.textContent.clientWidth}px`,
+            height: `${this.textContent.clientHeight}px`,
+            font: window.getComputedStyle(this.textContent).font,
+            fontSize: window.getComputedStyle(this.textContent).fontSize,
+            lineHeight: window.getComputedStyle(this.textContent).lineHeight,
+            padding: window.getComputedStyle(this.textContent).padding,
+            whiteSpace: 'pre-wrap',
+            wordWrap: 'break-word',
+            boxSizing: 'border-box'
+        });
+        document.body.appendChild(tempContainer);
+
+        try {
+            // Join all content with proper spacing
+            const allText = content.replace(/\n\s*\n/g, '\n\n').trim();
+            let currentPosition = 0;
+
+            while (currentPosition < allText.length) {
+                let testLength = allText.length - currentPosition;
+                tempContainer.textContent = allText.substring(currentPosition, currentPosition + testLength);
+
+                // Binary search to find maximum content that fits
+                while (tempContainer.scrollHeight > tempContainer.clientHeight) {
+                    testLength = Math.floor(testLength / 2);
+                    tempContainer.textContent = allText.substring(currentPosition, currentPosition + testLength);
+                }
+
+                // Fine-tune by adding more content
+                let step = Math.max(1, Math.floor(testLength / 10));
+                let lastFitLength = testLength;
+
+                while (currentPosition + testLength < allText.length) {
+                    const nextLength = Math.min(testLength + step, allText.length - currentPosition);
+                    tempContainer.textContent = allText.substring(currentPosition, currentPosition + nextLength);
+
+                    if (tempContainer.scrollHeight <= tempContainer.clientHeight) {
+                        lastFitLength = nextLength;
+                        testLength = nextLength;
+                    } else {
+                        if (step === 1) break;
+                        step = Math.max(1, Math.floor(step / 2));
+                    }
+                }
+
+                // Find the best break point near our ideal length
+                let breakPoint = currentPosition + lastFitLength;
+                const searchRange = 20; // Characters to look ahead for a good break point
+                let bestBreak = breakPoint;
+                let foundGoodBreak = false;
+
+                // Look for a good break point within our search range
+                for (let i = 0; i < searchRange && breakPoint + i < allText.length; i++) {
+                    const pos = breakPoint + i;
+                    // Check for sentence end
+                    if (allText[pos] === '.' && (pos + 1 >= allText.length || allText[pos + 1] === ' ' || allText[pos + 1] === '\n')) {
+                        bestBreak = pos + 1;
+                        foundGoodBreak = true;
+                        break;
+                    }
+                    // Check for paragraph break
+                    if (allText[pos] === '\n' && allText[pos + 1] === '\n') {
+                        bestBreak = pos + 2;
+                        foundGoodBreak = true;
+                        break;
+                    }
+                }
+
+                // If we didn't find a sentence break, look for a word break
+                if (!foundGoodBreak) {
+                    for (let i = 0; i < searchRange && breakPoint + i < allText.length; i++) {
+                        const pos = breakPoint + i;
+                        if (allText[pos] === ' ') {
+                            bestBreak = pos;
+                            foundGoodBreak = true;
+                            break;
+                        }
+                    }
+                }
+
+                // If we still haven't found a break, just use the last fit point
+                if (!foundGoodBreak) {
+                    bestBreak = currentPosition + lastFitLength;
+                }
+
+                // Add the page
+                const pageContent = allText.substring(currentPosition, bestBreak).trim();
+                if (pageContent) {
+                    this.pages.push(pageContent);
+                }
+
+                // Move to next position, ensuring we don't skip any text
+                currentPosition = bestBreak;
+                while (currentPosition < allText.length && 
+                      (allText[currentPosition] === ' ' || allText[currentPosition] === '\n')) {
+                    currentPosition++;
+                }
+            }
+        } finally {
+            document.body.removeChild(tempContainer);
+        }
+
+        // Update display
+        this.updatePageDisplay();
+    }
+
+    updatePageDisplay() {
+        if (!this.textContent || this.pages.length === 0) {
+            console.error('No content or pages to display');
+            return;
+        }
+
+        // Ensure currentPage is within bounds
+        this.currentPage = Math.max(1, Math.min(this.currentPage, this.pages.length));
+        const pageIndex = this.currentPage - 1;
+
+        // Update content with smooth transition
+        this.textContent.style.opacity = '0';
+        setTimeout(() => {
+            this.textContent.textContent = this.pages[pageIndex];
+            this.textContent.style.opacity = '1';
+        }, 150);
+
+        // Update page counter
+        const pageCounter = document.querySelector('.page-counter');
+        if (pageCounter) {
+            pageCounter.textContent = `Page ${this.currentPage} of ${this.pages.length}`;
+        }
+
+        // Update navigation buttons
+        if (this.prevButton) {
+            this.prevButton.disabled = this.currentPage <= 1;
+        }
+        if (this.nextButton) {
+            this.nextButton.disabled = this.currentPage >= this.pages.length;
+        }
+    }
+
+    nextPage() {
+        if (this.currentPage < this.pages.length) {
+            this.currentPage++;
+            this.updatePageDisplay();
+            console.log(`Navigated to page ${this.currentPage} of ${this.pages.length}`);
+        }
+    }
+
+    prevPage() {
+        if (this.currentPage > 1) {
+            this.currentPage--;
+            this.updatePageDisplay();
+            console.log(`Navigated to page ${this.currentPage} of ${this.pages.length}`);
+        }
+    }
+
+    resetTextView() {
+        // Clear content
+        this.textContent.textContent = '';
+        
+        // Reset title
+        this.bookTitle.textContent = '';
+        
+        // Reset UI state
+        this.resetSelectionState();
+        
+        // Hide audio players
+        this.samplePlayer.classList.add('hidden');
+        this.voicePreviewPlayers.forEach(player => player.classList.add('hidden'));
+        this.previewAudios.forEach(audio => audio.src = '');
+    }
+
+    resetSelectionState() {
+        // Reset selection UI
+        this.selectionInfo.classList.add('hidden');
+        if (this.selectionLength) {
+            this.selectionLength.textContent = '0';
+        }
+        
+        // Reset buttons
+        this.generateButton.disabled = true;
+        this.downloadButton.disabled = true;
+        
+        // Clear selection data
+        this.selectedText = '';
+        this.currentSelection = { start: 0, end: 0 };
     }
 
     showUploadView() {
@@ -230,54 +687,14 @@ class App {
     }
 
     downloadSample() {
-        if (this.sampleAudio.src) {
+        if (this.currentAudioBlob) {
             const a = document.createElement('a');
-            a.href = this.sampleAudio.src;
+            a.href = URL.createObjectURL(this.currentAudioBlob);
             a.download = 'audiobook-sample.mp3';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
         }
-    }
-
-    prevPage() {
-        if (this.currentPage > 1) {
-            this.currentPage--;
-            this.textContent.scrollTo({
-                top: (this.currentPage - 1) * this.pageSize,
-                behavior: 'smooth'
-            });
-            this.updatePageInfo();
-        }
-    }
-
-    nextPage() {
-        const totalPages = this.getTotalPages();
-        if (this.currentPage < totalPages) {
-            this.currentPage++;
-            this.textContent.scrollTo({
-                top: (this.currentPage - 1) * this.pageSize,
-                behavior: 'smooth'
-            });
-            this.updatePageInfo();
-        }
-    }
-
-    getTotalPages() {
-        return Math.ceil(this.textContent.scrollHeight / this.pageSize);
-    }
-
-    updatePageInfo() {
-        const totalPages = this.getTotalPages();
-        document.getElementById('current-page').textContent = this.currentPage;
-        document.getElementById('page-number').textContent = `${this.currentPage}/${totalPages}`;
-        
-        // Update button states
-        const prevButtons = document.querySelectorAll('#prev-page, #page-up');
-        const nextButtons = document.querySelectorAll('#next-page, #page-down');
-        
-        prevButtons.forEach(btn => btn.disabled = this.currentPage === 1);
-        nextButtons.forEach(btn => btn.disabled = this.currentPage === totalPages);
     }
 }
 
