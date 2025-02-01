@@ -1,6 +1,12 @@
 .env 
+.env.local
+.env.development
+.env.production
 .DS_Store
 /venv/
 /backend/venv/
 /frontend/venv/
 /venv311
+*.pyc
+__pycache__/
+.vercel
