@@ -10,4 +10,5 @@ pydantic-settings==2.0.3
 SQLAlchemy[asyncio]==2.0.25
 alembic==1.13.1
 asyncpg==0.29.0
-fastapi-users[sqlalchemy]==12.1.2 
+fastapi-users[sqlalchemy]==12.1.2
+slowapi==0.1.8 
