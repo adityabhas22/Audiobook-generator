@@ -29,17 +29,18 @@ app = FastAPI(
     description=settings.api_description
 )
 
-# Configure CORS
+# Configure CORS - must be first middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_allowed_origins(),
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
-    expose_headers=["Set-Cookie"]
+    expose_headers=["Set-Cookie"],
+    max_age=3600,  # Cache preflight requests for 1 hour
 )
 
-# Add cookie middleware
+# Add cookie middleware after CORS
 app.add_middleware(CookieMiddleware)
 
 @app.get("/")

@@ -12,7 +12,8 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://localhost:3001",
         "http://localhost:8000",
-        "https://audiobook-generator-two.vercel.app"
+        "https://audiobook-generator-two.vercel.app",
+        "https://audiobook-generator-w1tf.onrender.com"
     ]
     
     # Database Settings
@@ -44,5 +45,6 @@ def get_allowed_origins():
         "http://localhost:3000",
         "http://localhost:3001",
         "http://localhost:8000",
-        "https://audiobook-generator-two.vercel.app"
+        "https://audiobook-generator-two.vercel.app",
+        "https://audiobook-generator-w1tf.onrender.com"
     ] 
