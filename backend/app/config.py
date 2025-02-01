@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+import json
 
 class Settings(BaseSettings):
     """Application settings"""
@@ -8,12 +9,7 @@ class Settings(BaseSettings):
     api_description: str = "API for generating audiobook samples using ElevenLabs TTS"
     
     # CORS Settings
-    allowed_origins: list[str] = [
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://localhost:8000",
-        "https://audiobook-generator-two.vercel.app"
-    ]
+    allowed_origins: str = '["http://localhost:3000","http://localhost:3001","http://localhost:8000","https://audiobook-generator-two.vercel.app"]'
     
     # Database Settings
     database_url: str
@@ -33,6 +29,10 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
 
+    def get_cors_origins(self) -> list[str]:
+        """Get CORS origins as a list"""
+        return json.loads(self.allowed_origins)
+
 @lru_cache()
 def get_settings() -> Settings:
     """Get cached settings"""
@@ -40,9 +40,5 @@ def get_settings() -> Settings:
 
 def get_allowed_origins():
     """Get allowed origins for CORS"""
-    return [
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://localhost:8000",
-        "https://audiobook-generator-two.vercel.app"
-    ] 
+    settings = get_settings()
+    return settings.get_cors_origins() 
