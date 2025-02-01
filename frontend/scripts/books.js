@@ -263,5 +263,6 @@ class Books {
     }
 }
 
-// Export the Books class instead of an instance
-export { Books }; 
+// Initialize and export a single instance
+const books = new Books();
+export default books; 
