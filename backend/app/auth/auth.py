@@ -14,11 +14,11 @@ logger = logging.getLogger(__name__)
 cookie_transport = CookieTransport(
     cookie_name="audiobook_auth",
     cookie_max_age=3600,
-    cookie_secure=True,  # Required for cross-origin
+    cookie_secure=settings.cookie_secure,  # Use from settings
     cookie_httponly=True,
-    cookie_samesite="none",  # Required for cross-origin
+    cookie_samesite=settings.cookie_samesite,  # Use from settings
     cookie_path="/",  # Root path to ensure cookie is sent for all requests
-    cookie_domain="audiobook-generator-w1tf.onrender.com"  # Must be the backend domain
+    cookie_domain=settings.get_cookie_domain()  # Use dynamic domain from settings
 )
 
 # JWT Strategy
