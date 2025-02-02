@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 cookie_transport = CookieTransport(
     cookie_name="audiobook_auth",
     cookie_max_age=3600,
-    cookie_secure=True,
+    cookie_secure=True,  # Required for cross-origin
     cookie_httponly=True,
-    cookie_samesite="none",
-    cookie_path="/api"  # Match the API prefix
+    cookie_samesite="lax",  # Try lax instead of none
+    cookie_path="/",  # Root path to ensure cookie is sent for all requests
 )
 
 # JWT Strategy

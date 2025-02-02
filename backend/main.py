@@ -22,11 +22,18 @@ logger.info(f"Allowed origins: {get_allowed_origins()}")
 # Configure CORS - must be first middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://audiobook-generator-two.vercel.app", "http://localhost:3000"],
+    allow_origins=["https://audiobook-generator-two.vercel.app"],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allow_headers=["*"],  # More permissive
-    expose_headers=["Set-Cookie", "Authorization"],
+    allow_headers=[
+        "Content-Type", 
+        "Authorization", 
+        "Accept", 
+        "Origin", 
+        "X-Requested-With",
+        "Cookie",
+    ],
+    expose_headers=["Set-Cookie"],
     max_age=3600,  # Cache preflight requests for 1 hour
 )
 
