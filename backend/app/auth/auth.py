@@ -26,10 +26,10 @@ class DebugCookieTransport(CookieTransport):
 cookie_transport = DebugCookieTransport(
     cookie_name="audiobook_auth",
     cookie_max_age=3600,
-    cookie_secure=False,  # Set to True in production with HTTPS
+    cookie_secure=True,  # Required for cross-origin in production
     cookie_httponly=True,
-    cookie_samesite="lax",
-    cookie_domain="localhost"  # Explicitly set domain for consistent behavior
+    cookie_samesite="none",  # Required for cross-origin
+    # Don't set cookie_domain to allow it to work with both localhost and production
 )
 
 # JWT Strategy
