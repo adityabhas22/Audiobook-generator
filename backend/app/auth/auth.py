@@ -6,19 +6,24 @@ from app.config import get_settings
 from typing import Optional
 from fastapi import Request, Response
 import logging
+from urllib.parse import urlparse
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
+
+# Get domain for production
+backend_domain = urlparse(settings.BACKEND_URL).netloc if settings.ENV == "production" else None
+logger.info(f"Using cookie domain: {backend_domain}")
 
 # Cookie transport for authentication
 cookie_transport = CookieTransport(
     cookie_name="audiobook_auth",
     cookie_max_age=3600,
-    cookie_secure=settings.cookie_secure,  # Use from settings
+    cookie_secure=settings.cookie_secure,
     cookie_httponly=True,
-    cookie_samesite=settings.cookie_samesite,  # Use from settings
-    cookie_path="/",  # Root path to ensure cookie is sent for all requests
-    cookie_domain=None  # No domain restriction to allow cross-origin cookies
+    cookie_samesite=settings.cookie_samesite,
+    cookie_path="/",
+    cookie_domain=backend_domain  # Explicitly set the domain in production
 )
 
 # JWT Strategy
