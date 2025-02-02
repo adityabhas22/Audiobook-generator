@@ -15,9 +15,11 @@ class CookieMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         response = await call_next(request)
         if 'set-cookie' in response.headers:
-            # Update existing cookies with SameSite=None and Secure
+            # Get all cookies
             cookies = response.headers.getlist('set-cookie')
-            response.headers.remove('set-cookie')
+            # Clear existing cookies
+            response.headers.pop('set-cookie')
+            # Add modified cookies
             for cookie in cookies:
                 if 'SameSite' not in cookie:
                     cookie += '; SameSite=None; Secure'
