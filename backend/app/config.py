@@ -26,8 +26,8 @@ class Settings(BaseSettings):
     ]
     
     # Cookie Settings
-    cookie_secure: bool = None  # Will be set based on environment
-    cookie_samesite: str = None  # Will be set based on environment
+    cookie_secure: bool = True
+    cookie_samesite: str = "none"
     cookie_domain: Optional[str] = None  # Will be determined based on environment
     
     # Database Settings
@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     def get_cookie_domain(self) -> Optional[str]:
         """Get cookie domain based on environment"""
         if self.ENV == "production":
-            # Extract domain from backend URL
+            # Extract domain from backend URL to ensure consistency
             from urllib.parse import urlparse
             parsed = urlparse(self.BACKEND_URL)
             return parsed.netloc
@@ -66,11 +66,6 @@ def get_settings() -> Settings:
     if settings.ENV == "production":
         settings.FRONTEND_URL = "https://audiobook-generator-two.vercel.app"
         settings.BACKEND_URL = "https://audiobook-generator-w1tf.onrender.com"
-        settings.cookie_secure = True
-        settings.cookie_samesite = "none"
-    else:
-        settings.cookie_secure = False
-        settings.cookie_samesite = "lax"
     
     return settings
 

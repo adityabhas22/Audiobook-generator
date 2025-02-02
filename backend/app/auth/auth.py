@@ -18,7 +18,7 @@ cookie_transport = CookieTransport(
     cookie_httponly=True,
     cookie_samesite=settings.cookie_samesite,  # Use from settings
     cookie_path="/",  # Root path to ensure cookie is sent for all requests
-    cookie_domain=settings.get_cookie_domain()  # Use dynamic domain from settings
+    cookie_domain=settings.get_cookie_domain()  # Dynamic based on environment
 )
 
 # JWT Strategy
