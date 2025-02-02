@@ -51,10 +51,9 @@ class Settings(BaseSettings):
     def get_cookie_domain(self) -> Optional[str]:
         """Get cookie domain based on environment"""
         if self.ENV == "production":
-            # Extract domain from backend URL to ensure consistency
-            from urllib.parse import urlparse
-            parsed = urlparse(self.BACKEND_URL)
-            return parsed.netloc
+            # In production, we don't set a domain to allow cross-origin cookies
+            # This is required for cross-origin cookies between Vercel and Render
+            return None
         return None  # No domain restriction in development
 
 @lru_cache()
