@@ -1,18 +1,9 @@
 import { API_URL } from './config.js';
 
-const DEBUG = true;
-
-function debug(...args) {
-    if (DEBUG) {
-        console.log('[Auth Debug]', ...args);
-    }
-}
-
 class Auth {
     constructor() {
         this.isAuthenticated = false;
         this.user = null;
-        debug('Auth initialized', { API_URL });
         this.setupEventListeners();
         this.updateUI(); // Just update UI based on initial state
     }
@@ -23,11 +14,9 @@ class Auth {
         document.getElementById('auth-toggle').addEventListener('click', () => this.toggleAuthMode());
         document.getElementById('auth-submit').addEventListener('click', () => this.handleAuth());
         document.getElementById('logout-btn').addEventListener('click', () => this.handleLogout());
-        debug('Event listeners set up');
     }
 
     showAuthModal(mode = 'signin') {
-        debug('Showing auth modal', { mode });
         const modal = document.getElementById('auth-modal');
         const title = document.getElementById('auth-title');
         const submitBtn = document.getElementById('auth-submit');
@@ -52,7 +41,6 @@ class Auth {
     toggleAuthMode() {
         const title = document.getElementById('auth-title');
         const currentMode = title.textContent === 'Sign In' ? 'signup' : 'signin';
-        debug('Toggling auth mode', { currentMode });
         this.showAuthModal(currentMode);
     }
 
@@ -61,8 +49,6 @@ class Auth {
         const password = document.getElementById('password').value;
         const name = document.getElementById('name').value;
         const isSignIn = document.getElementById('auth-title').textContent === 'Sign In';
-
-        debug('Handling auth', { isSignIn, email });
 
         try {
             if (isSignIn) {
@@ -77,7 +63,6 @@ class Auth {
     }
 
     async login(email, password) {
-        debug('Attempting login', { email });
         try {
             const response = await fetch(`${API_URL}/auth/jwt/login`, {
                 method: 'POST',
@@ -91,19 +76,10 @@ class Auth {
                 }),
             });
 
-            debug('Login response', { 
-                status: response.status,
-                statusText: response.statusText,
-                headers: Object.fromEntries(response.headers.entries())
-            });
-
             if (response.ok) {
-                debug('Login successful, getting user info');
                 await this.getCurrentUser();
                 return true;
             }
-
-            debug('Login failed');
             return false;
         } catch (error) {
             console.error('Login error:', error);
@@ -112,7 +88,6 @@ class Auth {
     }
 
     async getCurrentUser() {
-        debug('Getting current user');
         try {
             const response = await fetch(`${API_URL}/users/me`, {
                 credentials: 'include',
@@ -121,16 +96,9 @@ class Auth {
                 }
             });
 
-            debug('Get user response', { 
-                status: response.status,
-                statusText: response.statusText,
-                headers: Object.fromEntries(response.headers.entries())
-            });
-
             if (response.ok) {
                 this.user = await response.json();
                 this.isAuthenticated = true;
-                debug('User info retrieved', { user: this.user });
                 this.updateUI();
                 document.dispatchEvent(new CustomEvent('authStateChanged', { 
                     detail: { isAuthenticated: true, user: this.user }
@@ -138,7 +106,6 @@ class Auth {
                 return this.user;
             }
             
-            debug('Failed to get user info');
             this.user = null;
             this.isAuthenticated = false;
             this.updateUI();

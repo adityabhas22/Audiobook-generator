@@ -1,48 +1,56 @@
-from fastapi import APIRouter, UploadFile, HTTPException, Depends, Request
+from fastapi import APIRouter, UploadFile, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from app.services import text_processor, tts_service
-from app.models import GenerateAudioRequest, VoicesResponse, ErrorResponse, Book, BookCreate, BookResponse
+from app.models import GenerateAudioRequest, VoicesResponse, ErrorResponse, Book
 from app.auth.models import User
-from app.auth.auth import current_active_user, get_debug_user
+from app.auth.auth import current_active_user
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.database import get_async_session, get_db
+from app.database import get_async_session
 from sqlalchemy import select
 import io
-from sqlalchemy.orm import Session
-from typing import List
-from app.services import book_service
-import logging
 
-logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # Book-related endpoints
-@router.get("/users/me", response_model=User)
-async def get_current_user(user: User = Depends(get_debug_user)):
-    return user
-
-@router.get("/books", response_model=List[BookResponse])
-async def get_books(
-    user: User = Depends(get_debug_user),
-    db: Session = Depends(get_db)
+@router.get("/books")
+async def get_user_books(
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session)
 ):
-    return book_service.get_books(db, user)
+    """Get all books for the current user"""
+    query = select(Book).where(Book.user_id == user.id)
+    result = await session.execute(query)
+    books = result.scalars().all()
+    return books
 
-@router.post("/books", response_model=BookResponse)
+@router.post("/books")
 async def create_book(
-    book: BookCreate,
-    user: User = Depends(get_debug_user),
-    db: Session = Depends(get_db)
+    title: str,
+    content: str,
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session)
 ):
-    return book_service.create_book(db, book, user)
+    """Create a new book for the current user"""
+    book = Book(
+        title=title,
+        content=content,
+        user_id=user.id
+    )
+    session.add(book)
+    await session.commit()
+    await session.refresh(book)
+    return book
 
-@router.get("/books/{book_id}", response_model=BookResponse)
+@router.get("/books/{book_id}")
 async def get_book(
     book_id: int,
-    user: User = Depends(get_debug_user),
-    db: Session = Depends(get_db)
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session)
 ):
-    book = book_service.get_book(db, book_id, user)
+    """Get a specific book for the current user"""
+    query = select(Book).where(Book.id == book_id, Book.user_id == user.id)
+    result = await session.execute(query)
+    book = result.scalar_one_or_none()
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
     return book
