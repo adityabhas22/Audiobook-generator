@@ -17,6 +17,7 @@ cookie_transport = CookieTransport(
     cookie_secure=True,
     cookie_httponly=True,
     cookie_samesite="none",
+    cookie_path="/api"  # Match the API prefix
 )
 
 # JWT Strategy
