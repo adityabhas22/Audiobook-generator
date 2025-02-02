@@ -48,11 +48,6 @@ class FileHandler {
     }
 
     async handleFile(file) {
-        if (!auth.isAuthenticated) {
-            alert('Please sign in to upload books');
-            return;
-        }
-
         if (!file.name.endsWith('.txt') && !file.name.endsWith('.epub')) {
             alert('Please upload a .txt or .epub file');
             return;
@@ -62,21 +57,27 @@ class FileHandler {
         formData.append('file', file);
 
         try {
-            const response = await fetch(`${API_URL}/upload`, {
+            // Use the public endpoint instead
+            const response = await fetch(`${API_URL}/public/upload`, {
                 method: 'POST',
-                body: formData,
-                credentials: 'include'
+                body: formData
             });
 
             if (!response.ok) {
                 throw new Error('Upload failed');
             }
 
-            const book = await response.json();
+            const bookData = await response.json();
             
-            // Refresh books list and show text view
-            await books.loadBooks();
-            books.handleGenerateAudio(book);
+            // Show text view with the uploaded content
+            if (books.app) {
+                books.app.showTextView({
+                    title: bookData.title,
+                    content: bookData.content
+                });
+            } else {
+                console.error('App reference not found');
+            }
             
         } catch (error) {
             console.error('Upload error:', error);
