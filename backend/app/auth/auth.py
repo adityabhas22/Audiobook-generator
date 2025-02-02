@@ -17,8 +17,7 @@ cookie_transport = CookieTransport(
     cookie_secure=True,  # Required for cross-origin
     cookie_httponly=True,
     cookie_samesite="none",  # Required for cross-origin
-    cookie_path="/",  # Root path to ensure cookie is sent for all requests
-    cookie_domain="audiobook-generator-w1tf.onrender.com" if settings.ENV == "production" else None
+    cookie_path="/"  # Root path to ensure cookie is sent for all requests
 )
 
 # JWT Strategy
