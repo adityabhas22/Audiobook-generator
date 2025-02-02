@@ -507,89 +507,87 @@ class App {
         document.body.appendChild(tempContainer);
 
         try {
-            // Join all content with proper spacing
-            const allText = content.replace(/\n\s*\n/g, '\n\n').trim();
+            // Normalize line endings and clean up spacing
+            const allText = content.replace(/\r\n/g, '\n')
+                                 .replace(/\r/g, '\n')
+                                 .replace(/\n\s*\n/g, '\n\n')
+                                 .trim();
+            
             let currentPosition = 0;
+            let lastGoodBreak = 0;
 
             while (currentPosition < allText.length) {
-                let testLength = allText.length - currentPosition;
-                tempContainer.textContent = allText.substring(currentPosition, currentPosition + testLength);
-
-                // Binary search to find maximum content that fits
-                while (tempContainer.scrollHeight > tempContainer.clientHeight) {
-                    testLength = Math.floor(testLength / 2);
-                    tempContainer.textContent = allText.substring(currentPosition, currentPosition + testLength);
-                }
-
-                // Fine-tune by adding more content
-                let step = Math.max(1, Math.floor(testLength / 10));
-                let lastFitLength = testLength;
-
-                while (currentPosition + testLength < allText.length) {
-                    const nextLength = Math.min(testLength + step, allText.length - currentPosition);
-                    tempContainer.textContent = allText.substring(currentPosition, currentPosition + nextLength);
-
+                // Start with a reasonable chunk size
+                let chunkSize = 1000;
+                let lastFitSize = 0;
+                
+                // Binary search to find the maximum content that fits
+                while (chunkSize > 0) {
+                    const testContent = allText.substring(currentPosition, currentPosition + chunkSize);
+                    tempContainer.textContent = testContent;
+                    
                     if (tempContainer.scrollHeight <= tempContainer.clientHeight) {
-                        lastFitLength = nextLength;
-                        testLength = nextLength;
+                        lastFitSize = chunkSize;
+                        chunkSize = Math.min(chunkSize + 500, allText.length - currentPosition);
                     } else {
-                        if (step === 1) break;
-                        step = Math.max(1, Math.floor(step / 2));
+                        chunkSize = Math.max(0, chunkSize - 100);
                     }
                 }
 
-                // Find the best break point near our ideal length
-                let breakPoint = currentPosition + lastFitLength;
-                const searchRange = 20; // Characters to look ahead for a good break point
+                if (lastFitSize === 0) {
+                    console.error('Could not fit any content in page');
+                    break;
+                }
+
+                // Find the best break point
+                let breakPoint = currentPosition + lastFitSize;
                 let bestBreak = breakPoint;
-                let foundGoodBreak = false;
 
-                // Look for a good break point within our search range
-                for (let i = 0; i < searchRange && breakPoint + i < allText.length; i++) {
-                    const pos = breakPoint + i;
-                    // Check for sentence end
-                    if (allText[pos] === '.' && (pos + 1 >= allText.length || allText[pos + 1] === ' ' || allText[pos + 1] === '\n')) {
-                        bestBreak = pos + 1;
-                        foundGoodBreak = true;
-                        break;
-                    }
+                // Look back for a good break point
+                for (let i = breakPoint; i > currentPosition; i--) {
                     // Check for paragraph break
-                    if (allText[pos] === '\n' && allText[pos + 1] === '\n') {
-                        bestBreak = pos + 2;
-                        foundGoodBreak = true;
+                    if (allText[i] === '\n' && allText[i - 1] === '\n') {
+                        bestBreak = i;
+                        break;
+                    }
+                    // Check for sentence end
+                    if (allText[i - 1] === '.' && (allText[i] === ' ' || allText[i] === '\n')) {
+                        bestBreak = i;
+                        break;
+                    }
+                    // Check for word break
+                    if (allText[i] === ' ') {
+                        bestBreak = i;
                         break;
                     }
                 }
 
-                // If we didn't find a sentence break, look for a word break
-                if (!foundGoodBreak) {
-                    for (let i = 0; i < searchRange && breakPoint + i < allText.length; i++) {
-                        const pos = breakPoint + i;
-                        if (allText[pos] === ' ') {
-                            bestBreak = pos;
-                            foundGoodBreak = true;
-                            break;
-                        }
-                    }
+                // If we couldn't find a good break point, use the last fit size
+                if (bestBreak === breakPoint) {
+                    bestBreak = currentPosition + lastFitSize;
                 }
 
-                // If we still haven't found a break, just use the last fit point
-                if (!foundGoodBreak) {
-                    bestBreak = currentPosition + lastFitLength;
-                }
-
-                // Add the page
+                // Extract the page content
                 const pageContent = allText.substring(currentPosition, bestBreak).trim();
                 if (pageContent) {
                     this.pages.push(pageContent);
+                    console.log(`Added page ${this.pages.length} with ${pageContent.length} characters`);
                 }
 
-                // Move to next position, ensuring we don't skip any text
+                // Move to next position
                 currentPosition = bestBreak;
+                // Skip any whitespace or newlines
                 while (currentPosition < allText.length && 
-                      (allText[currentPosition] === ' ' || allText[currentPosition] === '\n')) {
+                       (allText[currentPosition] === ' ' || allText[currentPosition] === '\n')) {
                     currentPosition++;
                 }
+
+                // Safety check to prevent infinite loops
+                if (currentPosition <= lastGoodBreak) {
+                    console.error('Pagination not advancing, breaking to prevent infinite loop');
+                    break;
+                }
+                lastGoodBreak = currentPosition;
             }
         } finally {
             document.body.removeChild(tempContainer);
@@ -597,6 +595,7 @@ class App {
 
         // Update display
         this.updatePageDisplay();
+        console.log(`Pagination complete: ${this.pages.length} pages created`);
     }
 
     updatePageDisplay() {
