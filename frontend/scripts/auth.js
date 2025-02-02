@@ -4,26 +4,8 @@ class Auth {
     constructor() {
         this.isAuthenticated = false;
         this.user = null;
-        this.initializeAuth();
         this.setupEventListeners();
-    }
-
-    async initializeAuth() {
-        try {
-            const response = await fetch(`${API_URL}/users/me`, {
-                credentials: 'include'
-            });
-            if (response.ok) {
-                this.user = await response.json();
-                this.isAuthenticated = true;
-                this.updateUI();
-                document.dispatchEvent(new CustomEvent('authStateChanged', { 
-                    detail: { isAuthenticated: true, user: this.user }
-                }));
-            }
-        } catch (error) {
-            console.error('Error checking auth state:', error);
-        }
+        this.updateUI(); // Just update UI based on initial state
     }
 
     setupEventListeners() {
