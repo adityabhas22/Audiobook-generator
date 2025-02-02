@@ -10,26 +10,13 @@ import logging
 settings = get_settings()
 logger = logging.getLogger(__name__)
 
-class DebugCookieTransport(CookieTransport):
-    async def get_login_response(self, token: str) -> Response:
-        response = await super().get_login_response(token)
-        logger.info(f"Setting cookie: {self.cookie_name}={token}")
-        logger.info(f"Cookie settings: secure={self.cookie_secure}, httponly={self.cookie_httponly}, samesite={self.cookie_samesite}")
-        return response
-
-    async def get_strategy_from_request(self, request: Request) -> Optional[str]:
-        token = request.cookies.get(self.cookie_name)
-        logger.info(f"Reading cookie from request: {self.cookie_name}={token}")
-        return token
-
 # Cookie transport for authentication
-cookie_transport = DebugCookieTransport(
+cookie_transport = CookieTransport(
     cookie_name="audiobook_auth",
     cookie_max_age=3600,
     cookie_secure=True,  # Required for cross-origin in production
     cookie_httponly=True,
     cookie_samesite="none",  # Required for cross-origin
-    # Don't set cookie_domain to allow it to work with both localhost and production
 )
 
 # JWT Strategy

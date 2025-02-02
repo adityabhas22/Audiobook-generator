@@ -3,33 +3,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routers import api, auth
 from app.config import get_settings, get_allowed_origins
 import logging
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import Response
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 settings = get_settings()
-
-class CookieMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        response = await call_next(request)
-        if 'set-cookie' in response.headers:
-            # Get all cookies
-            cookies = response.headers.getlist('set-cookie')
-            # Clear existing cookies
-            response.headers.pop('set-cookie')
-            # Add modified cookies
-            for cookie in cookies:
-                if 'SameSite' not in cookie:
-                    cookie += '; SameSite=None; Secure'
-                response.headers.append('set-cookie', cookie)
-        return response
 
 app = FastAPI(
     title=settings.api_title,
     description=settings.api_description
 )
+
+# Log CORS settings
+logger.info(f"Allowed origins: {get_allowed_origins()}")
 
 # Configure CORS - must be first middleware
 app.add_middleware(
@@ -41,9 +28,6 @@ app.add_middleware(
     expose_headers=["Set-Cookie"],
     max_age=3600,  # Cache preflight requests for 1 hour
 )
-
-# Add cookie middleware after CORS
-app.add_middleware(CookieMiddleware)
 
 @app.get("/")
 async def root():

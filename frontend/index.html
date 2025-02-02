@@ -168,7 +168,10 @@
 
     <!-- API Configuration -->
     <script>
-        window.API_URL = 'https://audiobook-generator-w1tf.onrender.com/api';
+        // Use localhost for local development, production URL otherwise
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        window.API_URL = isLocalhost ? 'http://localhost:8000/api' : 'https://audiobook-generator-w1tf.onrender.com/api';
+        console.log('Using API URL:', window.API_URL);  // Debug log
     </script>
 
     <!-- Load modules in correct order -->
