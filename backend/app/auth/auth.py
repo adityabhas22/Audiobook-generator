@@ -16,7 +16,7 @@ cookie_transport = CookieTransport(
     cookie_max_age=3600,
     cookie_secure=True,  # Required for cross-origin
     cookie_httponly=True,
-    cookie_samesite="lax",  # Try lax instead of none
+    cookie_samesite="none",  # Required for cross-origin
     cookie_path="/",  # Root path to ensure cookie is sent for all requests
 )
 

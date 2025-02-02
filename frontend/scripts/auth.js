@@ -86,9 +86,10 @@ class Auth {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 },
-                body: new URLSearchParams({
+                body: JSON.stringify({
                     username: email,
                     password: password,
                 }),
