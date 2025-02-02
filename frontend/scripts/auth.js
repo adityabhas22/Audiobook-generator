@@ -81,83 +81,117 @@ class Auth {
     }
 
     async login(email, password) {
-        const formData = new URLSearchParams();
-        formData.append('username', email);
-        formData.append('password', password);
-
-        const response = await fetch(`${API_URL}/auth/jwt/login`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: formData,
-            credentials: 'include'
-        });
-
-        if (!response.ok) {
-            throw new Error('Login failed. Please check your credentials.');
-        }
-
-        const userResponse = await fetch(`${API_URL}/users/me`, {
-            credentials: 'include'
-        });
-
-        if (!userResponse.ok) {
-            throw new Error('Failed to get user information after login.');
-        }
-
-        this.user = await userResponse.json();
-        this.isAuthenticated = true;
-        this.updateUI();
-        document.getElementById('auth-modal').classList.add('hidden');
-        document.dispatchEvent(new CustomEvent('authStateChanged', { 
-            detail: { isAuthenticated: true, user: this.user }
-        }));
-    }
-
-    async register(email, password, name) {
-        const response = await fetch(`${API_URL}/auth/register`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                email,
-                password,
-                name,
-                is_active: true,
-                is_superuser: false,
-                is_verified: false
-            }),
-            credentials: 'include'
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.detail || 'Registration failed. Please try again.');
-        }
-
-        await this.login(email, password);
-    }
-
-    async handleLogout() {
         try {
-            await fetch(`${API_URL}/auth/jwt/logout`, {
+            const response = await fetch(`${API_URL}/auth/jwt/login`, {
                 method: 'POST',
-                credentials: 'include'
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    username: email,
+                    password: password,
+                }),
             });
+
+            if (response.ok) {
+                await this.getCurrentUser();
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('Login error:', error);
+            return false;
+        }
+    }
+
+    async getCurrentUser() {
+        try {
+            const response = await fetch(`${API_URL}/users/me`, {
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                }
+            });
+
+            if (response.ok) {
+                this.user = await response.json();
+                this.isAuthenticated = true;
+                this.updateUI();
+                document.dispatchEvent(new CustomEvent('authStateChanged', { 
+                    detail: { isAuthenticated: true, user: this.user }
+                }));
+                return this.user;
+            }
             
-            this.isAuthenticated = false;
             this.user = null;
+            this.isAuthenticated = false;
             this.updateUI();
             document.dispatchEvent(new CustomEvent('authStateChanged', { 
                 detail: { isAuthenticated: false }
             }));
-            
-            document.querySelectorAll('.view').forEach(view => view.classList.add('hidden'));
-            document.getElementById('books-view').classList.remove('hidden');
+            return null;
+        } catch (error) {
+            console.error('Get user error:', error);
+            this.user = null;
+            this.isAuthenticated = false;
+            this.updateUI();
+            document.dispatchEvent(new CustomEvent('authStateChanged', { 
+                detail: { isAuthenticated: false }
+            }));
+            return null;
+        }
+    }
+
+    async register(email, password, name) {
+        try {
+            const response = await fetch(`${API_URL}/auth/register`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email,
+                    password,
+                    name,
+                }),
+            });
+
+            if (response.ok) {
+                await this.login(email, password);
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('Registration error:', error);
+            return false;
+        }
+    }
+
+    async handleLogout() {
+        try {
+            const response = await fetch(`${API_URL}/auth/jwt/logout`, {
+                method: 'POST',
+                credentials: 'include',
+            });
+
+            if (response.ok) {
+                this.user = null;
+                this.isAuthenticated = false;
+                this.updateUI();
+                document.dispatchEvent(new CustomEvent('authStateChanged', { 
+                    detail: { isAuthenticated: false }
+                }));
+                
+                document.querySelectorAll('.view').forEach(view => view.classList.add('hidden'));
+                document.getElementById('books-view').classList.remove('hidden');
+                return true;
+            }
+            return false;
         } catch (error) {
             console.error('Logout error:', error);
+            return false;
         }
     }
 
