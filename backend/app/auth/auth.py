@@ -8,6 +8,7 @@ from fastapi import Request, Response
 import logging
 from urllib.parse import urlparse
 import json
+from fastapi import Depends
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -106,10 +107,16 @@ fastapi_users = FastAPIUsers[User, int](
     [auth_backend],
 )
 
-# Auth dependencies with debugging
-async def debug_current_user(request: Request):
-    await debug_request(request)
-    return request
+# Current user dependencies with debugging
+current_active_user = fastapi_users.current_user(active=True)
+current_superuser = fastapi_users.current_user(active=True, superuser=True)
 
-current_active_user = fastapi_users.current_user(active=True, dependency=debug_current_user)
-current_superuser = fastapi_users.current_user(active=True, superuser=True, dependency=debug_current_user) 
+# Add debug wrapper for routes that use current_user
+async def get_debug_user(user = Depends(current_active_user)):
+    logger.debug("=== Current User Debug ===")
+    logger.debug(f"User ID: {user.id}")
+    logger.debug(f"User Email: {user.email}")
+    logger.debug(f"User Is Active: {user.is_active}")
+    logger.debug(f"User Is Verified: {user.is_verified}")
+    logger.debug(f"User Is Superuser: {user.is_superuser}")
+    return user 
