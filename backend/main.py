@@ -22,7 +22,7 @@ logger.info(f"Allowed origins: {get_allowed_origins()}")
 # Configure CORS - must be first middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://audiobook-generator-two.vercel.app"],
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=[
