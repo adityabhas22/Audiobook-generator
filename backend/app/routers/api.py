@@ -8,8 +8,134 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_async_session
 from sqlalchemy import select
 import io
+from pydantic import BaseModel, Field
 
 router = APIRouter()
+
+# Constants
+MAX_PUBLIC_CHARS = 500  # Maximum characters for public endpoints
+
+# Public endpoint models
+class PublicTextRequest(BaseModel):
+    """Request model for public text-to-speech endpoint"""
+    text: str = Field(..., max_length=MAX_PUBLIC_CHARS)
+    voice_id: str | None = None
+
+class PublicBookRequest(BaseModel):
+    """Request model for public book processing"""
+    title: str = Field(..., max_length=100)
+    content: str = Field(..., max_length=MAX_PUBLIC_CHARS)
+    voice_id: str | None = None
+
+# Public endpoints (no authentication required)
+@router.get(
+    "/voices",
+    response_model=VoicesResponse,
+    responses={
+        500: {"model": ErrorResponse}
+    }
+)
+async def get_voices():
+    """
+    Get available voices from ElevenLabs
+    
+    Returns:
+        VoicesResponse: List of available voices
+        
+    Raises:
+        HTTPException: If fetching voices fails
+    """
+    try:
+        voices = await tts_service.get_available_voices()
+        return VoicesResponse(voices=voices)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/public/generate-audio")
+async def generate_public_audio(request: PublicTextRequest):
+    """
+    Generate audio from text without requiring authentication
+    
+    Args:
+        request: The text to convert and optional voice ID
+        
+    Returns:
+        StreamingResponse: The generated audio file
+    """
+    try:
+        audio_data = await tts_service.generate_audio(request.text, request.voice_id)
+        return StreamingResponse(
+            io.BytesIO(audio_data),
+            media_type="audio/mpeg",
+            headers={
+                "Content-Disposition": "attachment; filename=generated-audio.mp3"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/public/process-book")
+async def process_public_book(request: PublicBookRequest):
+    """
+    Process a book without authentication
+    
+    Args:
+        request: Book details including title, content and optional voice ID
+        
+    Returns:
+        dict: Processed book content and audio URL
+    """
+    try:
+        # Generate audio for the content
+        audio_data = await tts_service.generate_audio(request.content, request.voice_id)
+        
+        # Return the processed content
+        return {
+            "title": request.title,
+            "content": request.content,
+            "audio": StreamingResponse(
+                io.BytesIO(audio_data),
+                media_type="audio/mpeg",
+                headers={
+                    "Content-Disposition": f"attachment; filename={request.title.lower().replace(' ', '_')}.mp3"
+                }
+            )
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/public/upload")
+async def upload_public_file(file: UploadFile):
+    """
+    Upload and process a file without authentication
+    
+    Args:
+        file: The file to upload (.txt or .epub)
+        
+    Returns:
+        dict: The extracted content
+    """
+    if not file.filename.endswith(('.txt', '.epub')):
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported file format. Please upload a .txt or .epub file"
+        )
+    
+    try:
+        content = await text_processor.extract_text(file)
+        
+        # Limit content length for public endpoint
+        if len(content) > MAX_PUBLIC_CHARS:
+            content = content[:MAX_PUBLIC_CHARS]
+            
+        return {
+            "title": file.filename,
+            "content": content
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Book-related endpoints
 @router.get("/books")
@@ -203,31 +329,6 @@ async def generate_sample(request: GenerateAudioRequest):
                 "Content-Disposition": "attachment; filename=sample.mp3"
             }
         )
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get(
-    "/voices",
-    response_model=VoicesResponse,
-    responses={
-        500: {"model": ErrorResponse}
-    }
-)
-async def get_voices():
-    """
-    Get available voices from ElevenLabs
-    
-    Returns:
-        VoicesResponse: List of available voices
-        
-    Raises:
-        HTTPException: If fetching voices fails
-    """
-    try:
-        voices = await tts_service.get_available_voices()
-        return VoicesResponse(voices=voices)
     except HTTPException as e:
         raise e
     except Exception as e:
