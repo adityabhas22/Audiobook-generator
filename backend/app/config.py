@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
-from typing import List
+from typing import List, Optional
 import os
 
 class Settings(BaseSettings):
@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     # Cookie Settings
     cookie_secure: bool = True
     cookie_samesite: str = "none"
-    cookie_domain: str = None  # Will be set based on environment
+    cookie_domain: Optional[str] = None  # Will be determined based on environment
     
     # Database Settings
     database_url: str
@@ -48,20 +48,22 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
 
-    def get_cookie_domain(self) -> str:
+    def get_cookie_domain(self) -> Optional[str]:
         """Get cookie domain based on environment"""
         if self.ENV == "production":
-            return "audiobook-generator-w1tf.onrender.com"
-        return None  # None means the cookie will work on any domain in development
+            # Extract domain from backend URL to ensure consistency
+            from urllib.parse import urlparse
+            parsed = urlparse(self.BACKEND_URL)
+            return parsed.netloc
+        return None  # No domain restriction in development
 
 @lru_cache()
 def get_settings() -> Settings:
     """Get cached settings"""
-    env = os.getenv("ENV", "development")
     settings = Settings()
     
     # Set URLs based on environment
-    if env == "production":
+    if settings.ENV == "production":
         settings.FRONTEND_URL = "https://audiobook-generator-two.vercel.app"
         settings.BACKEND_URL = "https://audiobook-generator-w1tf.onrender.com"
     
@@ -69,11 +71,4 @@ def get_settings() -> Settings:
 
 def get_allowed_origins() -> List[str]:
     """Get allowed origins for CORS"""
-    settings = get_settings()
-    return [
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://localhost:8000",
-        "https://audiobook-generator-two.vercel.app",
-        "https://audiobook-generator-w1tf.onrender.com"
-    ] 
+    return get_settings().allowed_origins 

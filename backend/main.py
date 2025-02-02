@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routers import api, auth
 from app.config import get_settings, get_allowed_origins
 import logging
+import os
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -35,4 +36,10 @@ async def root():
 
 # Include routers
 app.include_router(auth.router, prefix="/api")  # Include auth routes first
-app.include_router(api.router, prefix="/api") 
+app.include_router(api.router, prefix="/api")
+
+# Add port configuration for Render
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True) 

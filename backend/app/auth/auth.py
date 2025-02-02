@@ -17,7 +17,7 @@ cookie_transport = CookieTransport(
     cookie_secure=settings.cookie_secure,
     cookie_httponly=True,
     cookie_samesite=settings.cookie_samesite,
-    cookie_domain=settings.get_cookie_domain(),  # This will be None in development
+    cookie_domain=settings.get_cookie_domain(),  # Will be None in development, domain in production
 )
 
 # JWT Strategy
