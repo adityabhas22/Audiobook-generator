@@ -7,62 +7,20 @@
     <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
-    <!-- Auth Modal -->
-    <div id="auth-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="auth-title">Sign In</h2>
-                <button class="close-button" onclick="document.getElementById('auth-modal').classList.add('hidden')">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="auth-form">
-                    <div class="form-group">
-                        <label for="email">Email</label>
-                        <input type="email" id="email" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="password">Password</label>
-                        <input type="password" id="password" required>
-                    </div>
-                    <div id="name-group" class="form-group hidden">
-                        <label for="name">Name</label>
-                        <input type="text" id="name">
-                    </div>
-                    <div class="auth-actions">
-                        <button id="auth-submit" class="primary-button">Sign In</button>
-                        <button id="auth-toggle" class="text-button">Need an account? Sign Up</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- User Menu -->
-    <div class="user-menu">
-        <div id="user-section" class="hidden">
-            <span id="user-name"></span>
-            <button id="logout-btn" class="text-button">Logout</button>
-        </div>
-        <div id="auth-section">
-            <button id="login-btn" class="secondary-button">Sign In</button>
-            <button id="register-btn" class="primary-button">Sign Up</button>
-        </div>
-    </div>
-
-    <!-- Book List View -->
-    <div id="books-view" class="view">
-        <h1>My Books</h1>
-        <div class="books-grid" id="books-grid">
-            <!-- Books will be added here dynamically -->
-        </div>
-        <div class="upload-action">
-            <button id="upload-new-book" class="primary-button">+ Add New Book</button>
-        </div>
-    </div>
-
     <div class="container">
+        <!-- Book List View -->
+        <div id="books-view" class="view" style="display: block;">
+            <h1>My Books</h1>
+            <div class="books-grid" id="books-grid">
+                <!-- Books will be added here dynamically -->
+            </div>
+            <div class="upload-action">
+                <button id="upload-new-book" class="primary-button">+ Add New Book</button>
+            </div>
+        </div>
+
         <!-- Initial Upload View -->
-        <div id="upload-view" class="view hidden">
+        <div id="upload-view" class="view" style="display: none;">
             <div class="header-actions">
                 <h1>Create Audiobook Sample</h1>
                 <button id="back-to-books" class="text-button">← Back to Books</button>
@@ -83,19 +41,19 @@
             <div class="voice-preview-section">
                 <h2>Preview Voices</h2>
                 <div class="voice-selector">
-                    <select id="voice-select" class="voice-dropdown">
+                    <select id="upload-voice-select" class="voice-dropdown">
                         <option value="">Loading voices...</option>
                     </select>
-                    <button id="preview-voice-btn" class="secondary-button">Preview Voice</button>
+                    <button class="preview-voice-btn secondary-button">Preview Voice</button>
                 </div>
-                <div id="voice-preview-player" class="audio-player hidden">
-                    <audio id="preview-audio" controls></audio>
+                <div id="upload-preview-player" class="audio-player" style="display: none;">
+                    <audio id="upload-preview-audio" controls></audio>
                 </div>
             </div>
         </div>
 
         <!-- Text View -->
-        <div id="text-view" class="view hidden">
+        <div id="text-view" class="view" style="display: none;">
             <!-- Top Navigation -->
             <nav class="top-nav">
                 <div class="nav-left">
@@ -129,14 +87,12 @@
                     <!-- Voice Selection -->
                     <div class="panel-section">
                         <h3>Voice Selection</h3>
-                        <select id="voice-select" class="voice-dropdown">
+                        <select id="text-voice-select" class="voice-dropdown">
                             <option value="">Select a voice...</option>
                         </select>
-                        <button id="preview-voice-btn" class="secondary-button" disabled>
-                            Preview Voice
-                        </button>
-                        <div id="voice-preview-player" class="audio-player hidden">
-                            <audio id="preview-audio" controls></audio>
+                        <button class="preview-voice-btn secondary-button">Preview Voice</button>
+                        <div id="text-preview-player" class="audio-player" style="display: none;">
+                            <audio id="text-preview-audio" controls></audio>
                         </div>
                     </div>
 
@@ -154,7 +110,7 @@
                     <!-- Generated Sample -->
                     <div class="panel-section">
                         <h3>Generated Sample</h3>
-                        <div id="sample-player" class="audio-player hidden">
+                        <div id="sample-player" class="audio-player" style="display: none;">
                             <audio id="sample-audio" controls></audio>
                             <button id="download-btn" class="secondary-button" disabled>
                                 Download Sample
@@ -166,19 +122,11 @@
         </div>
     </div>
 
-    <!-- API Configuration -->
-    <script>
-        // Use localhost for local development, production URL otherwise
-        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        window.API_URL = isLocalhost ? 'http://localhost:8000/api' : 'https://audiobook-generator-w1tf.onrender.com/api';
-        console.log('Using API URL:', window.API_URL);  // Debug log
-    </script>
-
-    <!-- Load modules in correct order -->
-    <script src="scripts/config.js" type="module"></script>
-    <script src="scripts/auth.js" type="module"></script>
-    <script src="scripts/books.js" type="module"></script>
-    <script src="scripts/app.js" type="module"></script>
-    <script src="scripts/fileHandler.js" type="module"></script>
+    <!-- Scripts -->
+    <script type="module" src="scripts/config.js"></script>
+    <script type="module" src="scripts/localStorageHandler.js"></script>
+    <script type="module" src="scripts/localFileHandler.js"></script>
+    <script type="module" src="scripts/localBooks.js"></script>
+    <script type="module" src="scripts/app.js"></script>
 </body>
 </html> 

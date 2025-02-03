@@ -1,10 +1,10 @@
 import { API_URL, MAX_SAMPLE_LENGTH } from './config.js';
-import books from './books.js';
+import localBooks from './localBooks.js';
 
 class App {
     constructor() {
         // Initialize Books
-        this.books = books;
+        this.books = localBooks;
         this.books.setApp(this);
         
         // Views
@@ -12,10 +12,11 @@ class App {
         this.textView = document.getElementById('text-view');
         
         // Voice selection (both views)
-        this.voiceSelects = document.querySelectorAll('#voice-select');
-        this.previewVoiceBtns = document.querySelectorAll('#preview-voice-btn');
-        this.previewAudios = document.querySelectorAll('#preview-audio');
-        this.voicePreviewPlayers = document.querySelectorAll('#voice-preview-player');
+        this.voiceSelects = [
+            document.getElementById('upload-voice-select'),
+            document.getElementById('text-voice-select')
+        ];
+        this.previewVoiceBtns = document.querySelectorAll('.preview-voice-btn');
         
         // Text selection
         this.textContent = document.getElementById('text-content');
@@ -54,6 +55,7 @@ class App {
         this.handleTextSelection = this.handleTextSelection.bind(this);
         this.nextPage = this.nextPage.bind(this);
         this.prevPage = this.prevPage.bind(this);
+        this.previewVoice = this.previewVoice.bind(this);
         
         // Initialize immediately
         this.loadVoices();
@@ -63,7 +65,7 @@ class App {
     setupEventListeners() {
         // Voice preview for all voice buttons
         this.previewVoiceBtns.forEach(btn => {
-            btn.addEventListener('click', () => this.previewVoice());
+            btn.addEventListener('click', this.previewVoice);
         });
         
         // Text selection
@@ -88,32 +90,41 @@ class App {
         
         // Back to books grid - handle all back buttons
         this.backButtons.forEach(button => {
-            button.addEventListener('click', () => this.showBooksView());
+            button.addEventListener('click', () => localBooks.showBooksView());
         });
+
+        // Add New Book button
+        const uploadNewBookBtn = document.getElementById('upload-new-book');
+        if (uploadNewBookBtn) {
+            uploadNewBookBtn.addEventListener('click', () => localBooks.showUploadView());
+        }
     }
 
     async loadVoices() {
         try {
             const response = await fetch(`${API_URL}/voices`, {
-                credentials: 'include'
+                credentials: 'include'  // Include credentials for CORS
             });
             
             if (!response.ok) {
-                throw new Error('Failed to load voices');
+                throw new Error(`Failed to load voices: ${response.statusText}`);
             }
 
             const data = await response.json();
-            this.populateVoiceSelect(data.voices);
+            // Handle both array format and object format with voices property
+            const voices = Array.isArray(data) ? data : data.voices || [];
+            this.updateVoiceSelects(voices);
         } catch (error) {
             console.error('Error loading voices:', error);
+            // Update UI to show error state
             this.voiceSelects.forEach(select => {
                 select.innerHTML = '<option value="">Failed to load voices</option>';
             });
         }
     }
 
-    populateVoiceSelect(voices) {
-        if (!voices || voices.length === 0) {
+    updateVoiceSelects(voices) {
+        if (!Array.isArray(voices) || voices.length === 0) {
             this.voiceSelects.forEach(select => {
                 select.innerHTML = '<option value="">No voices available</option>';
             });
@@ -127,19 +138,27 @@ class App {
         this.voiceSelects.forEach(select => {
             select.innerHTML = '<option value="">Select a voice...</option>' + options;
         });
-        
-        // Enable preview buttons if voices are available
-        this.previewVoiceBtns.forEach(btn => {
-            btn.disabled = false;
-        });
     }
 
-    async previewVoice() {
-        // Get the voice select from the current view
-        const currentView = document.querySelector('.view:not(.hidden)');
-        const voiceSelect = currentView.querySelector('#voice-select');
-        const previewPlayer = currentView.querySelector('#voice-preview-player');
-        const previewAudio = currentView.querySelector('#preview-audio');
+    async previewVoice(event) {
+        const button = event.target.closest('.preview-voice-btn');
+        if (!button) return;
+
+        // Determine which view we're in
+        const isUploadView = button.closest('#upload-view') !== null;
+        
+        // Get the appropriate elements
+        const voiceSelect = isUploadView ? 
+            document.getElementById('upload-voice-select') : 
+            document.getElementById('text-voice-select');
+            
+        const previewPlayer = isUploadView ? 
+            document.getElementById('upload-preview-player') : 
+            document.getElementById('text-preview-player');
+            
+        const previewAudio = isUploadView ? 
+            document.getElementById('upload-preview-audio') : 
+            document.getElementById('text-preview-audio');
 
         const voiceId = voiceSelect.value;
         if (!voiceId) {
@@ -148,6 +167,7 @@ class App {
         }
 
         try {
+            console.log('Fetching voice preview for voice ID:', voiceId);
             const response = await fetch(`${API_URL}/voice-preview/${voiceId}`, {
                 credentials: 'include'
             });
@@ -160,7 +180,7 @@ class App {
             const audioUrl = URL.createObjectURL(audioBlob);
             
             previewAudio.src = audioUrl;
-            previewPlayer.classList.remove('hidden');
+            previewPlayer.style.display = 'block';
             previewAudio.play();
         } catch (error) {
             console.error('Error previewing voice:', error);
@@ -260,11 +280,11 @@ class App {
     }
 
     async generateSample() {
-        // Get the voice select from the current view
-        const currentView = document.querySelector('.view:not(.hidden)');
-        const voiceSelect = currentView.querySelector('#voice-select');
+        // Get the voice select from the text view specifically
+        const voiceSelect = document.getElementById('text-voice-select');
+        const voiceId = voiceSelect?.value;
 
-        if (!this.selectedText || !voiceSelect?.value) {
+        if (!this.selectedText || !voiceId) {
             alert('Please select some text and a voice first.');
             return;
         }
@@ -275,16 +295,21 @@ class App {
         }
 
         try {
+            console.log('Generating sample with:', {
+                text: this.selectedText,
+                voiceId: voiceId
+            });
+
             const response = await fetch(`${API_URL}/generate-sample`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
+                credentials: 'include',
                 body: JSON.stringify({
                     text: this.selectedText,
-                    voice_id: voiceSelect.value
-                }),
-                credentials: 'include'
+                    voice_id: voiceId
+                })
             });
 
             if (!response.ok) {
@@ -303,19 +328,15 @@ class App {
             // Create object URL and update audio player
             const audioUrl = URL.createObjectURL(audioBlob);
             
-            // Get the sample player from the current view
-            const samplePlayer = currentView.querySelector('#sample-player');
-            const sampleAudio = currentView.querySelector('#sample-audio');
-            const downloadButton = currentView.querySelector('#download-btn');
-            
-            sampleAudio.src = audioUrl;
-            samplePlayer.classList.remove('hidden');
+            // Update the audio player
+            this.sampleAudio.src = audioUrl;
+            this.samplePlayer.style.display = 'block';
             
             // Store for download
             this.currentAudioBlob = audioBlob;
             
             // Enable download button
-            downloadButton.disabled = false;
+            this.downloadButton.disabled = false;
 
             // Clear the selection
             window.getSelection().removeAllRanges();
@@ -348,8 +369,8 @@ class App {
         if (this.samplePlayer) {
             this.samplePlayer.classList.add('hidden');
         }
-        this.voicePreviewPlayers.forEach(player => {
-            if (player) player.classList.add('hidden');
+        this.previewVoiceBtns.forEach(btn => {
+            if (btn) btn.classList.add('hidden');
         });
         this.previewAudios.forEach(audio => {
             if (audio) {
@@ -379,58 +400,21 @@ class App {
     }
 
     showTextView(book) {
-        if (!book || !book.content) {
-            console.error('No book content provided');
-            return;
-        }
-
-        // Hide books view and upload view, show text view
-        document.getElementById('books-view').classList.add('hidden');
-        if (this.uploadView) this.uploadView.classList.add('hidden');
-        if (this.textView) {
-            this.textView.classList.remove('hidden');
-            this.textView.style.display = 'block';
-        }
-
-        // Reset used ranges when opening a new book
-        this.usedRanges = [];
+        // Hide other views
+        this.uploadView.style.display = 'none';
+        document.getElementById('books-view').style.display = 'none';
         
-        // Set book title
-        if (this.bookTitle) {
-            this.bookTitle.textContent = book.title || 'Untitled Book';
-        }
-
-        // Clear any existing content and reset state
-        if (this.textContent) {
-            this.textContent.textContent = '';
-            this.pages = [];
-            this.currentPage = 1;
-        }
-
-        // Initialize pagination with the book content
-        this.initializePagination(book.content);
-
-        // Log total pages created
-        console.log(`Created ${this.pages.length} pages`);
+        // Update content
+        this.bookTitle.textContent = book.title;
+        this.textContent.textContent = book.content;
         
-        // Verify page content
-        this.pages.forEach((content, index) => {
-            console.log(`Page ${index + 1} length: ${content.length} characters`);
-        });
-
-        // Set up keyboard navigation
-        document.removeEventListener('keydown', this._keyboardHandler);
-        this._keyboardHandler = (e) => {
-            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-                this.nextPage();
-            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-                this.prevPage();
-            }
-        };
-        document.addEventListener('keydown', this._keyboardHandler);
-
-        // Force initial display update
-        this.updatePageDisplay();
+        // Show text view
+        this.textView.style.display = 'block';
+        
+        // Reset state
+        this.currentPage = 1;
+        this.calculatePages();
+        this.showCurrentPage();
     }
 
     setupTextSelection() {
@@ -658,7 +642,7 @@ class App {
         
         // Hide audio players
         this.samplePlayer.classList.add('hidden');
-        this.voicePreviewPlayers.forEach(player => player.classList.add('hidden'));
+        this.previewVoiceBtns.forEach(btn => btn.classList.add('hidden'));
         this.previewAudios.forEach(audio => audio.src = '');
     }
 
@@ -697,6 +681,6 @@ class App {
     }
 }
 
-// Initialize and export the app instance
+// Initialize app
 const app = new App();
 export default app; 

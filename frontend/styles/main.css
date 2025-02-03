@@ -723,31 +723,49 @@ h1 {
 
 /* Voice Preview Section */
 .voice-preview-section {
-    margin-top: 2.5rem;
-    padding-top: 2.5rem;
-    border-top: 2px solid var(--border-color);
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.voice-preview-section h2 {
+    margin-bottom: 1rem;
+    color: #333;
 }
 
 .voice-selector {
     display: flex;
     gap: 1rem;
-    margin-bottom: 1.5rem;
+    align-items: center;
+    margin-bottom: 1rem;
 }
 
 .voice-dropdown {
     flex: 1;
     padding: 0.75rem;
-    border: 2px solid var(--border-color);
-    border-radius: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
     font-size: 1rem;
-    background-color: var(--surface-color);
-    color: var(--text-primary);
-    transition: border-color 0.3s ease;
+    background: white;
+    min-width: 200px;
 }
 
-.voice-dropdown:focus {
-    outline: none;
-    border-color: var(--primary-color);
+.preview-voice-btn {
+    padding: 0.75rem 1.5rem;
+    white-space: nowrap;
+}
+
+.audio-player {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.audio-player audio {
+    width: 100%;
 }
 
 /* Text Selection View */
