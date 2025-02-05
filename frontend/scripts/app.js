@@ -289,6 +289,16 @@ class App {
             return;
         }
 
+        if (!this.selectedText) {
+            alert('Please select some text');
+            return;
+        }
+
+        if (!voiceId) {
+            alert('Please select a voice first.');
+            return;
+        }
+
         if (this.selectedText.length > this.MAX_SAMPLE_LENGTH) {
             alert(`Selection exceeds maximum length of ${this.MAX_SAMPLE_LENGTH} characters.`);
             return;
@@ -411,10 +421,9 @@ class App {
         // Show text view
         this.textView.style.display = 'block';
         
-        // Reset state
+        // Reset state and initialize pagination
         this.currentPage = 1;
-        this.calculatePages();
-        this.showCurrentPage();
+        this.initializePagination(book.content);
     }
 
     setupTextSelection() {
@@ -466,121 +475,115 @@ class App {
 
     initializePagination(content) {
         if (!content || !this.textContent) {
-            console.error('Missing content or text container');
-            return;
+          console.error('Missing content or text container');
+          return;
         }
-
+      
         this.pages = [];
         this.currentPage = 1;
-
-        // Create a temporary container with exact same styling
+      
+        // Create a temporary container with the same styling as the text container
         const tempContainer = document.createElement('div');
+        const computedStyle = window.getComputedStyle(this.textContent);
         Object.assign(tempContainer.style, {
-            position: 'absolute',
-            visibility: 'hidden',
-            width: `${this.textContent.clientWidth}px`,
-            height: `${this.textContent.clientHeight}px`,
-            font: window.getComputedStyle(this.textContent).font,
-            fontSize: window.getComputedStyle(this.textContent).fontSize,
-            lineHeight: window.getComputedStyle(this.textContent).lineHeight,
-            padding: window.getComputedStyle(this.textContent).padding,
-            whiteSpace: 'pre-wrap',
-            wordWrap: 'break-word',
-            boxSizing: 'border-box'
+          position: 'absolute',
+          visibility: 'hidden',
+          width: `${this.textContent.clientWidth}px`,
+          height: `${this.textContent.clientHeight}px`,
+          font: computedStyle.font,
+          fontSize: computedStyle.fontSize,
+          lineHeight: computedStyle.lineHeight,
+          padding: computedStyle.padding,
+          whiteSpace: 'pre-wrap',
+          wordWrap: 'break-word',
+          boxSizing: 'border-box'
         });
         document.body.appendChild(tempContainer);
-
+      
         try {
-            // Normalize line endings and clean up spacing
-            const allText = content.replace(/\r\n/g, '\n')
-                                 .replace(/\r/g, '\n')
-                                 .replace(/\n\s*\n/g, '\n\n')
-                                 .trim();
-            
-            let currentPosition = 0;
-            let lastGoodBreak = 0;
-
-            while (currentPosition < allText.length) {
-                // Start with a reasonable chunk size
-                let chunkSize = 1000;
-                let lastFitSize = 0;
-                
-                // Binary search to find the maximum content that fits
-                while (chunkSize > 0) {
-                    const testContent = allText.substring(currentPosition, currentPosition + chunkSize);
-                    tempContainer.textContent = testContent;
-                    
-                    if (tempContainer.scrollHeight <= tempContainer.clientHeight) {
-                        lastFitSize = chunkSize;
-                        chunkSize = Math.min(chunkSize + 500, allText.length - currentPosition);
-                    } else {
-                        chunkSize = Math.max(0, chunkSize - 100);
-                    }
-                }
-
-                if (lastFitSize === 0) {
-                    console.error('Could not fit any content in page');
-                    break;
-                }
-
-                // Find the best break point
-                let breakPoint = currentPosition + lastFitSize;
-                let bestBreak = breakPoint;
-
-                // Look back for a good break point
-                for (let i = breakPoint; i > currentPosition; i--) {
-                    // Check for paragraph break
-                    if (allText[i] === '\n' && allText[i - 1] === '\n') {
-                        bestBreak = i;
-                        break;
-                    }
-                    // Check for sentence end
-                    if (allText[i - 1] === '.' && (allText[i] === ' ' || allText[i] === '\n')) {
-                        bestBreak = i;
-                        break;
-                    }
-                    // Check for word break
-                    if (allText[i] === ' ') {
-                        bestBreak = i;
-                        break;
-                    }
-                }
-
-                // If we couldn't find a good break point, use the last fit size
-                if (bestBreak === breakPoint) {
-                    bestBreak = currentPosition + lastFitSize;
-                }
-
-                // Extract the page content
-                const pageContent = allText.substring(currentPosition, bestBreak).trim();
-                if (pageContent) {
-                    this.pages.push(pageContent);
-                    console.log(`Added page ${this.pages.length} with ${pageContent.length} characters`);
-                }
-
-                // Move to next position
-                currentPosition = bestBreak;
-                // Skip any whitespace or newlines
-                while (currentPosition < allText.length && 
-                       (allText[currentPosition] === ' ' || allText[currentPosition] === '\n')) {
-                    currentPosition++;
-                }
-
-                // Safety check to prevent infinite loops
-                if (currentPosition <= lastGoodBreak) {
-                    console.error('Pagination not advancing, breaking to prevent infinite loop');
-                    break;
-                }
-                lastGoodBreak = currentPosition;
+          // Normalize line endings and clean up spacing
+          const allText = content
+            .replace(/\r\n/g, '\n')
+            .replace(/\r/g, '\n')
+            .replace(/\n\s*\n/g, '\n\n')
+            .trim();
+      
+          let currentPosition = 0;
+          while (currentPosition < allText.length) {
+            // Use binary search to determine the maximum number of characters
+            // that can fit in the container.
+            let low = 1; // at least one character
+            let high = allText.length - currentPosition;
+            let fitLength = 0;
+      
+            while (low <= high) {
+              const mid = Math.floor((low + high) / 2);
+              const testContent = allText.substring(currentPosition, currentPosition + mid);
+              tempContainer.textContent = testContent;
+      
+              if (tempContainer.scrollHeight <= tempContainer.clientHeight) {
+                // The content fits. Try a larger chunk.
+                fitLength = mid;
+                low = mid + 1;
+              } else {
+                // Too much content – reduce the size.
+                high = mid - 1;
+              }
             }
+      
+            if (fitLength === 0) {
+              console.error('Could not fit any content in the page.');
+              break;
+            }
+      
+            // Determine a natural break point within the fitted content.
+            let breakPoint = currentPosition + fitLength;
+            let bestBreak = breakPoint;
+      
+            // Search backwards for a natural break: double newline, sentence end, or a space.
+            for (let i = breakPoint; i > currentPosition; i--) {
+              if (allText[i] === '\n' && allText[i - 1] === '\n') {
+                bestBreak = i;
+                break;
+              }
+              if (allText[i - 1] === '.' && (allText[i] === ' ' || allText[i] === '\n')) {
+                bestBreak = i;
+                break;
+              }
+              if (allText[i] === ' ') {
+                bestBreak = i;
+                break;
+              }
+            }
+            // If no good break is found, default to the maximum that fits.
+            if (bestBreak <= currentPosition) {
+              bestBreak = breakPoint;
+            }
+      
+            // Extract the content for this page.
+            const pageContent = allText.substring(currentPosition, bestBreak).trim();
+            if (pageContent) {
+              this.pages.push(pageContent);
+              console.log(`Added page ${this.pages.length} with ${pageContent.length} characters`);
+            }
+      
+            // Move the current position forward and skip any extra whitespace/newlines.
+            currentPosition = bestBreak;
+            while (currentPosition < allText.length && 
+                   (allText[currentPosition] === ' ' || allText[currentPosition] === '\n')) {
+              currentPosition++;
+            }
+          }
         } finally {
-            document.body.removeChild(tempContainer);
+          // Clean up the temporary container.
+          document.body.removeChild(tempContainer);
         }
-
+      
         // Update display
         this.updatePageDisplay();
         console.log(`Pagination complete: ${this.pages.length} pages created`);
-    }
+      }
+      
 
     updatePageDisplay() {
         if (!this.textContent || this.pages.length === 0) {
