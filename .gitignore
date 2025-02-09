@@ -1,17 +1,37 @@
-.env 
+# Environment variables
+.env*
 .env.local
 .env.development
 .env.production
+
+# System files
 .DS_Store
-/venv/
-/backend/venv/
-/frontend/venv/
-/venv311
+
+# Python virtual environments
+venv/
+**/venv/
+venv311/
+
+# Python cache files
 *.pyc
 __pycache__/
-.vercel
-__pycache__/
+**/__pycache__/
 
+# Vercel
+.vercel
+
+# Browser data
 cookies.txt
+
+# Test and sample files
 *sample
 *test
+
+# Ignore everything
+*
+!*/
+
+# But track these directories and files
+!/frontend/**
+!/backend/**
+!/README.md
