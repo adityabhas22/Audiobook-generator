@@ -1,5 +1,4 @@
 import { API_URL } from './config.js';
-import auth from './auth.js';
 import books from './books.js';
 
 class FileHandler {
