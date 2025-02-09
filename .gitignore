@@ -11,3 +11,7 @@
 __pycache__/
 .vercel
 __pycache__/
+
+cookies.txt
+*sample
+*test
